@@ -28,18 +28,12 @@ const TITLES: Record<View, { t: string; s: string }> = {
 function Logo() {
   return (
     <div className="flex items-center gap-2.5 px-4 pb-4 pt-5">
-      <span className="relative shrink-0">
-        <svg width="32" height="32" viewBox="0 0 32 32">
-          <rect width="32" height="32" rx="9.5" fill="#0e7a52" />
-          <rect x="7" y="16" width="4" height="9" rx="1.5" fill="#f1f2ec" opacity="0.85" />
-          <rect x="14" y="11" width="4" height="14" rx="1.5" fill="#f1f2ec" />
-          <rect x="21" y="6" width="4" height="19" rx="1.5" fill="#f1f2ec" opacity="0.85" />
-        </svg>
-        <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border-2 border-night bg-moss" />
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border-2 border-ink bg-lime shadow-[2px_2px_0_0_#ff5ca8]">
+        <Icon name="bolt" size={18} sw={2.2} className="text-ink" />
       </span>
       <div className="leading-none">
-        <p className="font-display text-[17.5px] font-bold tracking-tight text-card">Cadence</p>
-        <p className="mt-1 font-mono text-[8.5px] font-medium uppercase tracking-[0.24em] text-nighttx">Social CRM</p>
+        <p className="font-display text-[17px] tracking-tight text-card">CADENCE</p>
+        <p className="mt-1 font-mono text-[8.5px] font-bold uppercase tracking-[0.26em] text-nighttx">social crm</p>
       </div>
     </div>
   );
@@ -56,8 +50,8 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
       label: 'Overview',
       items: [
         { v: 'dashboard', icon: 'dash', label: 'Dashboard' },
-        { v: 'inbox', icon: 'inbox', label: 'Inbox', badge: unread, badgeColor: '#c2483b' },
-        { v: 'tasks', icon: 'checksq', label: 'Tasks', badge: due, badgeColor: '#a96f14' },
+        { v: 'inbox', icon: 'inbox', label: 'Inbox', badge: unread, badgeColor: '#ff5ca8' },
+        { v: 'tasks', icon: 'checksq', label: 'Tasks', badge: due, badgeColor: '#ffd954' },
       ],
     },
     {
@@ -70,7 +64,7 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
     {
       label: 'Marketing',
       items: [
-        { v: 'calendar', icon: 'calendar', label: 'Calendar', badge: pending, badgeColor: '#c08a1e' },
+        { v: 'calendar', icon: 'calendar', label: 'Calendar', badge: pending, badgeColor: '#9db8ff' },
         { v: 'campaigns', icon: 'mail', label: 'Campaigns' },
         { v: 'marketing', icon: 'layout', label: 'Forms & Pages' },
       ],
@@ -105,21 +99,21 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
     <>
       {mobileOpen && <div className="fixed inset-0 z-40 bg-night/50 anim-fade md:hidden" onClick={onClose} />}
       <aside className={cx(
-        'fixed inset-y-0 left-0 z-40 flex w-[228px] shrink-0 flex-col border-r border-nightline bg-night transition-transform duration-300 md:static md:translate-x-0',
+        'fixed inset-y-0 left-0 z-40 flex w-[232px] shrink-0 flex-col border-r-2 border-ink bg-night transition-transform duration-300 md:static md:translate-x-0',
         mobileOpen ? 'translate-x-0' : '-translate-x-full',
       )}>
         <Logo />
 
         <button onClick={() => { a.nav('settings'); onClose(); }}
-          className="group mx-3 mb-3 flex items-center gap-2.5 rounded-lg border border-nightline bg-gradient-to-br from-night2 to-night2/40 px-2.5 py-2.5 text-left transition-all hover:border-moss/40">
-          <div className="relative grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-moss/22 font-mono text-[10px] font-bold text-[#3ecf95] shadow-[inset_0_1px_0_rgb(255_255_255/0.08)]">
+          className="group mx-3 mb-3 flex items-center gap-2.5 rounded-lg border-2 border-nightline bg-night2 px-2.5 py-2.5 text-left shadow-[3px_3px_0_0_#c8f169] transition-all hover:border-lime/60">
+          <div className="relative grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-nightline bg-lime/15 font-mono text-[10px] font-bold text-lime">
             E&O
-            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-night bg-moss" />
+            <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-night bg-lime" />
           </div>
           <div className="min-w-0 flex-1 leading-tight">
-            <p className="truncate text-xs font-semibold text-card">Ember & Oak Roastery</p>
-            <p className="mt-0.5 flex items-center gap-1 text-[10px] text-nighttx">
-              <span className="live-dot h-1.5 w-1.5 rounded-full bg-moss" /> All channels synced
+            <p className="truncate text-xs font-bold text-card">Ember & Oak Roastery</p>
+            <p className="mt-0.5 flex items-center gap-1 font-mono text-[9px] uppercase tracking-wider text-nighttx">
+              <span className="live-dot h-1.5 w-1.5 rounded-full bg-lime" /> all synced
             </p>
           </div>
           <Icon name="chevd" size={12} className="shrink-0 text-nighttx transition-transform group-hover:translate-y-0.5" />
@@ -137,20 +131,20 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
                 return (
                   <button key={it.v} onClick={() => { a.nav(it.v); onClose(); }}
                     className={cx(
-                      'group relative mb-0.5 flex w-full items-center gap-2 rounded-lg py-[6px] pl-2 pr-2.5 text-[13px] font-medium transition-all duration-150',
+                      'group mb-1 flex w-full items-center gap-2 rounded-lg border-[1.5px] py-[6px] pl-2 pr-2.5 text-[13px] font-bold transition-all duration-150',
                       active
-                        ? 'bg-gradient-to-r from-moss/18 to-transparent text-card shadow-[inset_0_0_0_1px_rgb(14_122_82/0.28)]'
-                        : 'text-nighttx hover:bg-night2/70 hover:text-card',
+                        ? 'border-ink bg-lime text-ink shadow-[2px_2px_0_0_#ff5ca8]'
+                        : 'border-transparent text-nighttx hover:border-nightline hover:bg-night2 hover:text-card',
                     )}>
-                    <span className={cx('absolute left-0 top-1/2 h-[18px] w-[3px] -translate-y-1/2 rounded-r-full bg-moss transition-all duration-200',
-                      active ? 'opacity-100' : 'opacity-0 group-hover:opacity-35')} />
                     <span className={cx('grid h-[26px] w-[26px] shrink-0 place-items-center rounded-[7px] transition-all duration-150',
-                      active ? 'bg-moss/22 text-[#3ecf95]' : 'text-nighttx group-hover:text-card')}>
-                      <Icon name={it.icon} size={15} />
+                      active ? 'text-ink' : 'text-nighttx group-hover:text-lime')}>
+                      <Icon name={it.icon} size={15} sw={active ? 2.2 : 1.8} />
                     </span>
                     <span className="flex-1 text-left">{it.label}</span>
                     {it.badge ? (
-                      <span className="tnum rounded-full px-1.5 py-[3px] font-mono text-[9.5px] font-bold leading-none text-card shadow-[0_1px_2px_rgb(0_0_0/0.25)]" style={{ background: it.badgeColor }}>
+                      <span className={cx('tnum rounded-md border px-1.5 py-[3px] font-mono text-[9.5px] font-bold leading-none',
+                        active ? 'border-ink bg-card text-ink' : 'border-ink/70 text-ink')}
+                        style={active ? undefined : { background: it.badgeColor }}>
                         {it.badge}
                       </span>
                     ) : null}
@@ -169,18 +163,18 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
           </div>
         </nav>
 
-        <div className="mx-3 mb-2 rounded-lg border border-nightline bg-night2/70 p-3 shadow-[inset_0_1px_0_rgb(255_255_255/0.04)]">
+        <div className="mx-3 mb-2 rounded-lg border-2 border-nightline bg-night2 p-3">
           <div className="flex items-center justify-between">
-            <p className="flex items-center gap-1.5 font-mono text-[9.5px] font-bold uppercase tracking-[0.16em] text-[#3ecf95]">
-              <Icon name="bolt" size={11} /> Growth plan
+            <p className="flex items-center gap-1.5 font-mono text-[9.5px] font-bold uppercase tracking-[0.16em] text-lime">
+              <Icon name="bolt" size={11} sw={2.2} /> Growth plan
             </p>
-            <button onClick={() => { a.nav('settings'); onClose(); }} className="text-[10px] font-semibold text-nighttx transition hover:text-card">Manage</button>
+            <button onClick={() => { a.nav('settings'); onClose(); }} className="text-[10px] font-bold text-nighttx underline decoration-pink decoration-2 underline-offset-2 transition hover:text-card">Manage</button>
           </div>
-          <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-nightline shadow-[inset_0_1px_2px_rgb(0_0_0/0.35)]">
-            <div className="h-full rounded-full bg-gradient-to-r from-[#0a5c3e] via-moss to-[#3ecf95] shadow-[0_0_8px_rgb(14_122_82/0.6)] transition-all duration-700" style={{ width: `${usedPct}%` }} />
+          <div className="mt-2.5 h-2 overflow-hidden rounded-sm border border-nightline bg-night">
+            <div className="h-full bg-lime transition-all duration-700" style={{ width: `${usedPct}%` }} />
           </div>
-          <p className="tnum mt-2 text-[10.5px] text-nighttx">
-            <span className="font-mono font-semibold text-card/90">{kfmt(s.contacts.length * 1030)}</span> / 25K contacts · 10 users
+          <p className="tnum mt-2 font-mono text-[10px] font-semibold text-nighttx">
+            <span className="text-card">{kfmt(s.contacts.length * 1030)}</span> / 25K contacts · 10 users
           </p>
         </div>
 
@@ -219,11 +213,11 @@ function SearchBox() {
         onFocus={() => setFocus(true)}
         onBlur={() => window.setTimeout(() => setFocus(false), 150)}
         placeholder="Search contacts, deals…"
-        className="h-9 w-full rounded-lg border border-line bg-card pl-9 pr-12 text-[13px] outline-none transition placeholder:text-faint focus:border-moss focus:ring-2 focus:ring-moss/15"
+        className="h-9 w-full rounded-lg border-[1.5px] border-ink bg-card pl-9 pr-12 text-[13px] font-medium outline-none transition placeholder:text-faint focus:shadow-hard-sm"
       />
       <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-line bg-paper px-1.5 py-0.5 font-mono text-[10px] text-faint">⌘K</span>
       {focus && results && (results.contacts.length > 0 || results.deals.length > 0) && (
-        <div className="absolute left-0 right-0 top-11 z-40 anim-pop overflow-hidden rounded-xl border border-line bg-card shadow-pop">
+        <div className="absolute left-0 right-0 top-11 z-40 anim-pop overflow-hidden rounded-xl border-2 border-ink bg-card shadow-pop">
           {results.contacts.length > 0 && (
             <div className="p-1.5">
               <p className="px-2 pb-1 pt-0.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.16em] text-faint">Contacts</p>
@@ -275,13 +269,13 @@ function CreateMenu() {
     <div className="relative">
       <button onClick={() => (can ? setOpen(o => !o) : a.toast('Viewer role is read-only — ask an Admin for Editor access', 'warning'))}
         title={can ? 'Create something new (N)' : 'Read-only role'}
-        className={cx('press flex h-9 items-center gap-1.5 rounded-lg bg-moss px-3.5 text-[13px] font-semibold text-card shadow-btn transition-colors hover:bg-pine', open && 'bg-pine', !can && 'cursor-not-allowed opacity-55')}>
+        className={cx('press-hard flex h-9 items-center gap-1.5 rounded-lg border-2 border-ink bg-lime px-3.5 text-[13px] font-bold text-ink shadow-hard', open && 'bg-butter', !can && 'cursor-not-allowed opacity-50')}>
         <Icon name="plus" size={15} sw={2.6} /> Create
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-11 z-40 w-48 anim-pop rounded-xl border border-line bg-card p-1.5 shadow-pop">
+          <div className="absolute right-0 top-11 z-40 w-48 anim-pop rounded-xl border-2 border-ink bg-card p-1.5 shadow-pop">
             {items.map(it => (
               <button key={it.label} onClick={() => { it.fn(); setOpen(false); }}
                 className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium text-ink2 transition hover:bg-mint/70 hover:text-ink">
@@ -303,14 +297,14 @@ function Bell() {
   const kindIcon = { auto: 'bolt', approval: 'clock', import: 'download', system: 'bell' } as const;
   return (
     <div className="relative">
-      <button onClick={() => setOpen(o => !o)} className="relative grid h-9 w-9 place-items-center rounded-lg border border-line bg-card text-ink2 transition hover:border-line2 hover:text-ink">
-        <Icon name="bell" size={16} />
-        {unread > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-danger px-1 font-mono text-[9px] font-bold text-card">{unread}</span>}
+      <button onClick={() => setOpen(o => !o)} className="relative grid h-9 w-9 place-items-center rounded-lg border-2 border-ink bg-card text-ink shadow-hard-sm transition-all hover:bg-butter active:translate-x-[2px] active:translate-y-[2px] active:shadow-none">
+        <Icon name="bell" size={16} sw={2} />
+        {unread > 0 && <span className="tnum absolute -right-1.5 -top-1.5 grid h-4.5 min-w-4.5 place-items-center rounded-md border-[1.5px] border-ink bg-pink px-1 font-mono text-[9px] font-bold text-ink">{unread}</span>}
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-11 z-40 w-[340px] anim-pop overflow-hidden rounded-xl border border-line bg-card shadow-pop">
+          <div className="absolute right-0 top-11 z-40 w-[340px] anim-pop overflow-hidden rounded-xl border-2 border-ink bg-card shadow-pop">
             <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
               <p className="font-display text-[13.5px] font-bold text-ink">Notifications</p>
               <button onClick={() => a.ui({ notifs: s.notifs.map(n => ({ ...n, read: true })) })} className="text-[11px] font-semibold text-moss transition hover:text-pine">
@@ -346,9 +340,9 @@ function SyncTicker() {
   }, []);
   const syncing = sec <= 3;
   return (
-    <div className="hidden items-center gap-1.5 rounded-lg border border-line bg-card px-2.5 py-2 xl:flex" title="Social APIs polled continuously — comments and DMs stream into the inbox">
-      <span className={cx('h-1.5 w-1.5 rounded-full', syncing ? 'live-dot bg-amber' : 'bg-moss')} />
-      <span className="font-mono text-[10px] font-semibold text-mut">{syncing ? 'syncing…' : `synced ${sec}s ago`}</span>
+    <div className="hidden items-center gap-1.5 rounded-lg border-[1.5px] border-ink bg-card px-2.5 py-2 shadow-hard-sm xl:flex" title="Social APIs polled continuously — comments and DMs stream into the inbox">
+      <span className={cx('h-1.5 w-1.5 rounded-full', syncing ? 'live-dot bg-butter' : 'bg-teal')} />
+      <span className="font-mono text-[10px] font-bold text-ink2">{syncing ? 'syncing…' : `synced ${sec}s ago`}</span>
     </div>
   );
 }
@@ -369,7 +363,7 @@ function UserMenu() {
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-12 z-40 w-[264px] anim-pop overflow-hidden rounded-xl border border-line bg-card shadow-pop">
+          <div className="absolute right-0 top-12 z-40 w-[264px] anim-pop overflow-hidden rounded-xl border-2 border-ink bg-card shadow-pop">
             <div className="border-b border-line bg-paper/60 px-4 py-3.5">
               <div className="flex items-center gap-2.5">
                 <Avatar name={me.name} color={me.color} size={36} />
@@ -413,7 +407,7 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
   const can = useCanEdit();
   const t = TITLES[s.view];
   return (
-    <header className="sticky top-0 z-20 flex h-[60px] shrink-0 items-center gap-3 border-b border-line bg-paper/85 px-4 backdrop-blur-md md:px-6">
+    <header className="sticky top-0 z-20 flex h-[62px] shrink-0 items-center gap-3 border-b-2 border-ink bg-paper/92 px-4 backdrop-blur-md md:px-6">
       <IconBtn name="more" onClick={onMenu} className="md:hidden" title="Menu" />
       <div key={s.view} className="anim-rise min-w-0 flex-1">
         <p className="flex items-center gap-1.5 font-mono text-[8.5px] font-semibold uppercase tracking-[0.22em] text-moss">
@@ -423,10 +417,10 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
       </div>
       <SyncTicker />
       <SearchBox />
-      {!can && <Pill color="#a96f14" tint="#f7ecd6" className="hidden md:inline-flex"><Icon name="eye" size={11} /> Read-only</Pill>}
+      {!can && <Pill color="#e86a17" tint="#ffe9d4" className="hidden md:inline-flex"><Icon name="eye" size={11} /> Read-only</Pill>}
       <CreateMenu />
       <Bell />
-      <div className="flex items-center gap-2 border-l border-line pl-3">
+      <div className="flex items-center gap-2 border-l-2 border-ink pl-3">
         <UserMenu />
       </div>
     </header>

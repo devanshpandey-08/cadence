@@ -168,29 +168,29 @@ export function PlatformIcon({ p, size = 16, className }: { p: Platform; size?: 
 
 /* ---------- pipeline stages ---------- */
 export const STAGES: { id: Stage; label: string; color: string; tint: string }[] = [
-  { id: 'lead', label: 'Lead', color: '#8a978d', tint: '#edf0ea' },
-  { id: 'qualified', label: 'Qualified', color: '#4c86a8', tint: '#e7eff4' },
-  { id: 'proposal', label: 'Proposal', color: '#c08a1e', tint: '#f6ecd4' },
-  { id: 'negotiation', label: 'Negotiation', color: '#c4622d', tint: '#f8e9e0' },
-  { id: 'won', label: 'Closed Won', color: '#0e7a52', tint: '#e2efe7' },
-  { id: 'lost', label: 'Closed Lost', color: '#c2483b', tint: '#f8e6e2' },
+  { id: 'lead', label: 'Lead', color: '#75756b', tint: '#eeeee4' },
+  { id: 'qualified', label: 'Qualified', color: '#3d6bff', tint: '#e3eaff' },
+  { id: 'proposal', label: 'Proposal', color: '#d99a06', tint: '#fff3cc' },
+  { id: 'negotiation', label: 'Negotiation', color: '#e86a17', tint: '#ffe9d4' },
+  { id: 'won', label: 'Closed Won', color: '#2e9e4f', tint: '#e0f6e4' },
+  { id: 'lost', label: 'Closed Lost', color: '#e5484d', tint: '#ffe0df' },
 ];
 export const stageMeta = (id: Stage) => STAGES.find(s => s.id === id) ?? STAGES[0];
 
 /* ---------- post statuses ---------- */
 export const STATUSES: Record<PostStatus, { label: string; color: string; tint: string }> = {
-  draft: { label: 'Draft', color: '#6e776f', tint: '#eceee7' },
-  pending: { label: 'Pending approval', color: '#a96f14', tint: '#f7ecd6' },
-  approved: { label: 'Approved', color: '#2f8f83', tint: '#e1f0ee' },
-  scheduled: { label: 'Scheduled', color: '#3e7cb1', tint: '#e5eef6' },
-  published: { label: 'Published', color: '#0e7a52', tint: '#e2efe7' },
-  failed: { label: 'Failed', color: '#c2483b', tint: '#f8e6e2' },
+  draft: { label: 'Draft', color: '#75756b', tint: '#eeeee4' },
+  pending: { label: 'Pending approval', color: '#d99a06', tint: '#fff3cc' },
+  approved: { label: 'Approved', color: '#29c6a7', tint: '#ddf6ef' },
+  scheduled: { label: 'Scheduled', color: '#3d6bff', tint: '#e3eaff' },
+  published: { label: 'Published', color: '#2e9e4f', tint: '#e0f6e4' },
+  failed: { label: 'Failed', color: '#e5484d', tint: '#ffe0df' },
 };
 export const STATUS_ICON: Record<PostStatus, string> = {
   draft: 'edit', pending: 'clock', approved: 'check', scheduled: 'calendar', published: 'check', failed: 'alert',
 };
 
 /* ---------- misc ---------- */
-export const AV_COLORS = ['#0e7a52', '#3e7cb1', '#a96f14', '#7a5fa8', '#c4622d', '#2f8f83', '#b04a5a', '#5b7d3f'];
+export const AV_COLORS = ['#14140f', '#3d6bff', '#e86a17', '#ff5ca8', '#2e9e4f', '#29c6a7', '#e5484d', '#8a63d2'];
 export const hashColor = (s: string) => AV_COLORS[(s.charCodeAt(0) + s.length) % AV_COLORS.length];
 export const initials = (name: string) => name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
