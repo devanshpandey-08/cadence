@@ -33,6 +33,69 @@ function KpiTile({ label, value, prefix, suffix, series, color, delta, foot }: {
   );
 }
 
+function LaunchChecklist() {
+  const { s, a } = useApp();
+  const [off, setOff] = useState(() => { try { return localStorage.getItem('cadence-checklist-v1') === '1'; } catch { return false; } });
+
+  const items = useMemo(() => [
+    { id: 'channel', label: 'Connect a social channel', done: s.accounts.some(x => x.connected), view: 'settings' as const, icon: 'link' },
+    { id: 'import', label: 'Bring in contacts (HubSpot or CSV)', done: s.contacts.length >= 12, view: 'contacts' as const, icon: 'download' },
+    { id: 'post', label: 'Schedule a post on the calendar', done: s.posts.some(p => ['scheduled', 'approved', 'published'].includes(p.status)), view: 'calendar' as const, icon: 'send' },
+    { id: 'thread', label: 'Reply to a social thread', done: s.threads.some(t => t.status !== 'unread'), view: 'inbox' as const, icon: 'reply' },
+    { id: 'form', label: 'Create a lead-capture form', done: s.forms.length > 0, view: 'marketing' as const, icon: 'layout' },
+    { id: 'mail', label: 'Send or schedule an email campaign', done: s.campaigns.some(c => c.status !== 'draft'), view: 'campaigns' as const, icon: 'mail' },
+    { id: 'team', label: 'Invite a teammate', done: s.users.length >= 5, view: 'settings' as const, icon: 'users' },
+  ], [s]);
+
+  const doneCount = items.filter(i => i.done).length;
+  const allDone = doneCount === items.length;
+  const dismiss = () => { setOff(true); try { localStorage.setItem('cadence-checklist-v1', '1'); } catch { /* noop */ } };
+  if (off) return null;
+
+  const C = 2 * Math.PI * 22;
+
+  return (
+    <div className="anim-rise relative overflow-hidden rounded-xl border border-nightline bg-night px-4 py-3.5">
+      <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(420px 160px at 8% -20%, rgb(14 122 82 / 0.28), transparent 70%)' }} />
+      <div className="relative flex flex-wrap items-center gap-4">
+        <div className="relative h-[54px] w-[54px] shrink-0">
+          <svg width="54" height="54" viewBox="0 0 54 54" className="-rotate-90">
+            <circle cx="27" cy="27" r="22" fill="none" stroke="#29332b" strokeWidth="5" />
+            <circle cx="27" cy="27" r="22" fill="none" stroke="#0e7a52" strokeWidth="5" strokeLinecap="round"
+              strokeDasharray={C} strokeDashoffset={C - (doneCount / items.length) * C}
+              className="transition-all duration-700 ease-out" />
+          </svg>
+          <span className="absolute inset-0 grid place-items-center font-mono text-[11px] font-bold text-card">{doneCount}/{items.length}</span>
+        </div>
+        <div className="min-w-[180px] flex-1">
+          <p className="flex items-center gap-2 font-display text-[14.5px] font-bold tracking-tight text-card">
+            Launch checklist
+            {allDone && <span className="rounded-full bg-moss px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-card">All set</span>}
+          </p>
+          <p className="mt-0.5 text-[11px] text-nighttx">
+            {allDone ? 'Setup complete — you hit time-to-value in under a day. That\'s the whole point.' : 'The goal: first post scheduled or first contact added within 24 hours.'}
+          </p>
+        </div>
+        <div className="flex flex-1 flex-wrap items-center gap-1.5 lg:max-w-[560px]">
+          {items.map(i => (
+            <button key={i.id} onClick={() => a.nav(i.view)}
+              className={cx('flex items-center gap-1.5 rounded-full border py-1 pl-1.5 pr-2.5 text-[10.5px] font-semibold transition-all active:scale-95',
+                i.done ? 'border-moss/40 bg-moss/15 text-moss' : 'border-nightline bg-night2/70 text-nighttx hover:border-moss/50 hover:text-card')}>
+              <span className={cx('grid h-4 w-4 place-items-center rounded-full', i.done ? 'bg-moss text-card' : 'border border-nightline')}>
+                {i.done ? <Icon name="check" size={9} sw={3.2} /> : <Icon name={i.icon} size={8} />}
+              </span>
+              {i.label}
+            </button>
+          ))}
+        </div>
+        <button onClick={dismiss} className="relative shrink-0 text-nighttx transition hover:text-card" title="Dismiss checklist">
+          <Icon name="x" size={15} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function Dashboard() {
   const { s, a } = useApp();
   const [range, setRange] = useState<'7' | '30' | '90'>('30');
@@ -86,6 +149,8 @@ export function Dashboard() {
           <Btn onClick={() => a.openComposer()}><Icon name="send" size={14} /> New post</Btn>
         </div>
       </div>
+
+      <LaunchChecklist />
 
       {/* KPI row */}
       <div className="grid grid-cols-12 gap-4">

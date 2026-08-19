@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useApp } from '../store';
-import { Avatar, IconBtn, ToastHost } from './ui';
+import { Avatar, IconBtn, Modal, ToastHost } from './ui';
 import { cx, Icon, kfmt, relTime, TODAY } from '../meta';
 import type { View } from '../types';
+import { CommandPalette, GMAP } from './CommandPalette';
 
 const TITLES: Record<View, { t: string; s: string }> = {
   dashboard: { t: 'Dashboard', s: 'CRM, social and email — one pulse' },
@@ -116,6 +117,14 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
               })}
             </div>
           ))}
+          <div className="mx-1 mb-1 flex items-center justify-between rounded-lg border border-nightline/70 bg-night2/40 px-2.5 py-2">
+            <span className="flex items-center gap-1.5 font-mono text-[9.5px] font-semibold text-nighttx">
+              <kbd className="rounded border border-nightline bg-night2 px-1 py-0.5 text-[9px] text-card/80">⌘K</kbd> commands
+            </span>
+            <span className="flex items-center gap-1 font-mono text-[9.5px] font-semibold text-nighttx">
+              <kbd className="rounded border border-nightline bg-night2 px-1 py-0.5 text-[9px] text-card/80">?</kbd> shortcuts
+            </span>
+          </div>
         </nav>
 
         <div className="mx-3 mb-2 rounded-lg border border-nightline bg-night2/70 p-3">
@@ -282,6 +291,21 @@ function Bell() {
   );
 }
 
+function SyncTicker() {
+  const [sec, setSec] = useState(6);
+  useEffect(() => {
+    const t = window.setInterval(() => setSec(x => (x >= 47 ? 1 : x + 1)), 1000);
+    return () => window.clearInterval(t);
+  }, []);
+  const syncing = sec <= 3;
+  return (
+    <div className="hidden items-center gap-1.5 rounded-lg border border-line bg-card px-2.5 py-2 xl:flex" title="Social APIs polled continuously — comments and DMs stream into the inbox">
+      <span className={cx('h-1.5 w-1.5 rounded-full', syncing ? 'live-dot bg-amber' : 'bg-moss')} />
+      <span className="font-mono text-[10px] font-semibold text-mut">{syncing ? 'syncing…' : `synced ${sec}s ago`}</span>
+    </div>
+  );
+}
+
 function Topbar({ onMenu }: { onMenu: () => void }) {
   const { s } = useApp();
   const t = TITLES[s.view];
@@ -292,6 +316,7 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
         <h1 className="truncate font-display text-[16.5px] font-bold leading-tight tracking-tight text-ink">{t.t}</h1>
         <p className="hidden truncate text-[11px] leading-tight text-mut sm:block">{t.s}</p>
       </div>
+      <SyncTicker />
       <SearchBox />
       <CreateMenu />
       <Bell />
@@ -302,9 +327,76 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
   );
 }
 
+function Kbd({ children }: { children: ReactNode }) {
+  return <kbd className="inline-grid h-[20px] min-w-[20px] place-items-center rounded-[5px] border border-line bg-paper px-1 font-mono text-[10px] font-semibold text-ink2">{children}</kbd>;
+}
+
+const SHORTCUTS: { keys: string[]; label: string }[] = [
+  { keys: ['⌘', 'K'], label: 'Command palette — search & run anything' },
+  { keys: ['/'], label: 'Open the palette from anywhere' },
+  { keys: ['N'], label: 'Compose a new post' },
+  { keys: ['G', 'D'], label: 'Go to Dashboard' },
+  { keys: ['G', 'I'], label: 'Go to Inbox' },
+  { keys: ['G', 'T'], label: 'Go to Tasks' },
+  { keys: ['G', 'C'], label: 'Go to Contacts' },
+  { keys: ['G', 'P'], label: 'Go to Deal pipeline' },
+  { keys: ['G', 'S'], label: 'Go to Content calendar (schedule)' },
+  { keys: ['G', 'M'], label: 'Go to Email campaigns (mail)' },
+  { keys: ['G', 'F'], label: 'Go to Forms & pages' },
+  { keys: ['G', 'X'], label: 'Go to Settings' },
+  { keys: ['Esc'], label: 'Close dialogs, drawers and the palette' },
+];
+
+function ShortcutsHelp({ open, onClose }: { open: boolean; onClose: () => void }) {
+  return (
+    <Modal open={open} onClose={onClose} title="Keyboard shortcuts" sub="Move through Cadence without touching the mouse" w="max-w-md">
+      <div className="space-y-1">
+        {SHORTCUTS.map(sc => (
+          <div key={sc.label} className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 transition hover:bg-paper">
+            <span className="text-xs text-ink2">{sc.label}</span>
+            <span className="flex shrink-0 items-center gap-1">{sc.keys.map(k => <Kbd key={k}>{k}</Kbd>)}</span>
+          </div>
+        ))}
+      </div>
+    </Modal>
+  );
+}
+
 export function Shell({ children }: { children: ReactNode }) {
-  const { s } = useApp();
+  const { s, a } = useApp();
   const [mobileNav, setMobileNav] = useState(false);
+  const [palette, setPalette] = useState(false);
+  const [help, setHelp] = useState(false);
+  const sRef = useRef(s);
+  sRef.current = s;
+  const gPending = useRef(0);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      const typing = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPalette(p => !p);
+        return;
+      }
+      if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (sRef.current.composer.open) return;
+      const now = Date.now();
+      const inG = now - gPending.current < 900;
+      if (e.key === 'g' || e.key === 'G') { gPending.current = now; return; }
+      if (inG) {
+        const v = GMAP[e.key.toLowerCase()];
+        if (v) { e.preventDefault(); a.nav(v); gPending.current = 0; return; }
+      }
+      if (e.key === '/') { e.preventDefault(); setPalette(true); return; }
+      if (e.key === '?') { e.preventDefault(); setHelp(h => !h); return; }
+      if (e.key === 'n' || e.key === 'N') { e.preventDefault(); a.openComposer(); }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [a]);
+
   return (
     <div className="flex h-full overflow-hidden">
       <Sidebar mobileOpen={mobileNav} onClose={() => setMobileNav(false)} />
@@ -317,6 +409,8 @@ export function Shell({ children }: { children: ReactNode }) {
           </div>
         </main>
       </div>
+      <CommandPalette open={palette} onClose={() => setPalette(false)} />
+      <ShortcutsHelp open={help} onClose={() => setHelp(false)} />
       <ToastHost />
     </div>
   );

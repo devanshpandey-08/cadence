@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type {
   AppState, Campaign, Contact, Deal, FormDef, Notif, PageDef, Post, Stage, Task, Thread, ToastMsg, User, View,
 } from './types';
+import confetti from 'canvas-confetti';
 import { LIST_SIZES, seedState } from './data';
 import { addDays, isoOf, stageMeta, uid } from './meta';
 
@@ -145,6 +146,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
     const notify = (text: string, kind: Notif['kind'] = 'system') =>
       dispatch({ t: 'notif+', n: { id: uid(), text, at: isoOf(new Date()), read: false, kind } });
+    const celebrate = (big = false) => {
+      try {
+        const colors = ['#0e7a52', '#3e7cb1', '#c08a1e', '#2f8f83', '#f1f2ec'];
+        confetti({ particleCount: big ? 130 : 55, spread: big ? 75 : 55, startVelocity: big ? 38 : 26, origin: { y: 0.7 }, colors, disableForReducedMotion: true });
+        if (big) window.setTimeout(() => confetti({ particleCount: 70, spread: 90, origin: { y: 0.65, x: 0.6 }, colors, disableForReducedMotion: true }), 180);
+      } catch { /* confetti unavailable */ }
+    };
 
     return {
       nav: v => dispatch({ t: 'ui', p: { view: v, contactId: null, dealId: null } }),
@@ -198,6 +206,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           notify(`Automation created task "Send contract — ${dl.name}"`, 'auto');
           toast('Automation · "Send contract" task created', 'info');
         } else if (stage === 'won') {
+          celebrate(true);
           toast(`Deal won — ${dl.name}`);
           notify(`Deal "${dl.name}" closed won`, 'system');
         } else {
@@ -269,6 +278,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const opens = Math.round(sent * (0.36 + Math.random() * 0.16));
         const clicks = Math.round(opens * (0.09 + Math.random() * 0.06));
         dispatch({ t: 'campaign~', id, p: { status: 'sent', sent, opens, clicks, date: isoOf(new Date()) } });
+        celebrate();
         toast(`Sent to ${sent.toLocaleString()} subscribers via your SMTP`);
         notify(`Campaign "${c.name}" delivered — ${opens.toLocaleString()} opens so far`, 'system');
       },
