@@ -29,7 +29,7 @@ function Waveform({ live }: { live: boolean }) {
     <div className="flex h-12 items-center justify-center gap-[3px]">
       {Array.from({ length: bars }).map((_, i) => (
         <span key={i}
-          className={cx('w-[3px] rounded-full', live ? 'bg-moss' : 'bg-line2')}
+          className={cx('w-[3px] rounded-full', live ? 'bg-lime' : 'bg-line2')}
           style={live ? {
             height: `${8 + Math.abs(Math.sin((i * 7919 + Date.now() / 60) % 6.28)) * 34}px`,
             animation: `pulsedot ${0.6 + (i % 5) * 0.13}s ease-in-out ${i * 0.04}s infinite`,
@@ -110,13 +110,13 @@ export function Calls() {
           <div className="glow-top relative border-b border-line bg-night p-5 text-center text-card">
             <div className="bg-dots pointer-events-none absolute inset-0 opacity-25" />
             <div className="relative">
-              <div className="mx-auto mb-3 grid h-16 w-16 place-items-center rounded-full bg-moss/15 ring-1 ring-moss/40">
+              <div className="mx-auto mb-3 grid h-16 w-16 place-items-center rounded-full border-2 border-nightline bg-lime/10 ring-1 ring-lime/30">
                 <Avatar name={target || '?'} size={52} />
               </div>
               <p className="font-display text-[17px] font-bold tracking-tight">{target || 'Unknown'}</p>
               <p className="font-mono text-[10.5px] text-nighttx">{contact ? `${contact.company} · ${contact.phone ?? '+1 (503) 555-0100'}` : num || 'select a contact'}</p>
               <p className={cx('mt-2 font-mono text-[11px] font-semibold uppercase tracking-[0.18em]',
-                phase === 'idle' ? 'text-nighttx' : phase === 'ringing' ? 'text-amber' : 'text-moss')}>
+                phase === 'idle' ? 'text-nighttx' : phase === 'ringing' ? 'text-butter' : 'text-lime')}>
                 {phase === 'idle' ? 'Ready' : phase === 'ringing' ? 'Calling…' : `In call · ${fmtDur(secs)}`}
               </p>
               <div className="mt-2"><Waveform live={phase === 'live'} /></div>

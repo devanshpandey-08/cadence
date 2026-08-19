@@ -5,7 +5,7 @@ import type { Role, User } from '../types';
 import { Avatar, Btn, Card, Field, IconBtn, inputCls, Modal, Pill, SectionTitle, Toggle } from '../components/ui';
 
 const ROLE_META: Record<Role, { label: string; color: string; tint: string; can: string }> = {
-  admin: { label: 'Admin', color: '#0e7a52', tint: '#e2efe7', can: 'Full access · billing · user management' },
+  admin: { label: 'Admin', color: '#2e9e4f', tint: '#e0f6e4', can: 'Full access · billing · user management' },
   editor: { label: 'Editor', color: '#3e7cb1', tint: '#e5eef6', can: 'Create, edit, publish · contacts & deals' },
   viewer: { label: 'Viewer', color: '#6e776f', tint: '#eceee7', can: 'Read-only · calendar, contacts, reports' },
 };

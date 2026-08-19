@@ -5,6 +5,7 @@ import type { Platform } from '../types';
 import { Avatar, Btn, Card, CountUp, Pill, SectionTitle, Seg, Spark } from '../components/ui';
 
 type Tool = 'writer' | 'subject' | 'reply' | 'sentiment' | 'besttime' | 'leads';
+type Tone = 'bold' | 'warm' | 'expert';
 
 const TOOLS: { id: Tool; label: string; icon: string; tag: string; blurb: string }[] = [
   { id: 'writer', label: 'Post Writer', icon: 'edit', tag: 'Generate', blurb: 'Platform-tuned copy in your brand voice' },
@@ -38,13 +39,104 @@ function useStreamer() {
   return { text, busy, stream };
 }
 
-/* ---------- deterministic "AI" helpers ---------- */
-const POST_IDEAS: Record<string, (topic: string) => string> = {
-  linkedin: t => `We just wrapped a ${t.toLowerCase()} session and three things surprised us.\n\n1. Small batches beat volume on consistency.\n2. Our wholesale partners care about story, not just price.\n3. Shipping within 24h is now table stakes.\n\nIf you run a café program, we'd love to compare notes. ☕`,
-  instagram: t => `POV: it's roast day and the ${t.toLowerCase()} just hit the cooling tray. 🔥\n\nSmall batch. Shipped in 24h. Gone by Friday.\n\nTap the link in bio to grab the spring drop. #specialtycoffee #roastery`,
-  x: t => `hot take: your ${t.toLowerCase()} is fine. your follow-up is the problem.\n\nwe ship in 24h and reply in 2h. that's the whole moat.`,
-  facebook: t => `This week at the roastery: our ${t.toLowerCase()} is back, and we're roasting it in small batches for the first time.\n\nCome by Thursday for cupping night — first pour's on us.`,
+/* ---------- generation engine: tone hooks × platform formats × topic ---------- */
+const pick = <T,>(arr: T[], last: number): [T, number] => {
+  let i = Math.floor(Math.random() * arr.length);
+  if (arr.length > 1 && i === last) i = (i + 1) % arr.length;
+  return [arr[i], i];
 };
+
+const cap = (s: string) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+const kw = (s: string) => s.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(/\s+/).filter(w => w.length > 2).slice(0, 3);
+
+const HOOKS: Record<Tone, ((t: string) => string)[]> = {
+  bold: [
+    t => `Stop scrolling — we need to talk about ${t}.`,
+    t => `Unpopular opinion: ${t} is easier than everyone pretends.`,
+    t => `Everyone's doing ${t} wrong. Here's what we do instead.`,
+    t => `${cap(t)} isn't a tactic. It's a discipline.`,
+  ],
+  warm: [
+    t => `There's a small moment in every ${t} that makes it all worth it.`,
+    t => `Come sit with us for a minute — today is all about ${t}.`,
+    t => `Some things are better shared. ${cap(t)}, for instance.`,
+    t => `We saved you a seat. Today's brew: ${t}.`,
+  ],
+  expert: [
+    t => `After 90 days of measuring ${t}, three numbers changed our mind.`,
+    t => `We ran 40+ tests on ${t}. The results surprised us.`,
+    t => `If you only read one thing about ${t} this quarter, make it this.`,
+    t => `${cap(t)}: what the data actually says.`,
+  ],
+};
+
+const BODIES: Record<string, ((t: string) => string)[]> = {
+  linkedin: [
+    t => `Three things we learned the hard way:\n\n1. Consistency beats intensity — small weekly wins compound.\n2. People buy the story behind ${t}, not the feature list.\n3. Shipping fast is now table stakes, not a differentiator.\n\nIf your team touches ${t}, I'd genuinely love to compare notes.`,
+    t => `We used to treat ${t} as a side project. It's now our #1 growth lever.\n\nThe shift was simple: one owner, one metric, one weekly review.\n\nNo new tools. No new hires. Just focus.`,
+    t => `Most ${t} advice online is recycled. So here's ours, unfiltered:\n\n→ Start smaller than feels comfortable\n→ Publish before you're proud of it\n→ Let the replies set next week's agenda`,
+  ],
+  instagram: [
+    t => `POV: it's ${t} day and the whole roastery smells different. ✨\n\nSmall batch. Roasted this morning. Gone by Friday.\n\nLink in bio before it sells out.`,
+    t => `This is your sign to take ${t} seriously. 📸\n\nBehind the scenes: 6am starts, 3 cupping rounds, one very tired roaster.\n\nWorth every second.`,
+    t => `New drop alert 🚨 ${cap(t)} just hit the shelves.\n\nFirst 20 orders get a handwritten tasting card.`,
+  ],
+  x: [
+    t => `hot take: your ${t} isn't the problem. your follow-up is.`,
+    t => `we spent 90 days on ${t} so you don't have to. thread:`,
+    t => `${t}, ranked by what actually moves the number:\n\n1. speed\n2. story\n3. everything else`,
+  ],
+  facebook: [
+    t => `This week at the roastery: ${t} is back, and we're doing it in small batches for the first time.\n\nCome by Thursday for cupping night — first pour's on us.`,
+    t => `Big news, friends: ${cap(t)} is officially live.\n\nWe kept it small on purpose — 300 bags, hand-stamped, gone when they're gone.`,
+  ],
+  tiktok: [
+    t => `things nobody tells you about ${t} ☕\n\n1. day 1 is chaos\n2. day 30 is routine\n3. day 90 is when it gets fun`,
+    t => `POV: you finally nailed ${t} and the whole shop can smell it`,
+  ],
+  youtube: [
+    t => `${cap(t)} — the full breakdown.\n\nWhat we tried, what failed, and the exact setup that finally worked.`,
+    t => `We tested ${t} for 90 days straight. Here's everything.`,
+  ],
+  pinterest: [
+    t => `5 ways to make ${t} work for a small team — save this for your next planning session. 📌`,
+    t => `The ${t} checklist we wish we'd had on day one. Pin it, thank us later.`,
+  ],
+  gmb: [
+    t => `${cap(t)} is here this week at Ember & Oak.\n\nStop by before Saturday — mention this post for a free tasting flight.`,
+    t => `Fresh in: ${t}. Roasted on-site, served all week.\n\nBook a table or just walk in — we'll save you a seat.`,
+  ],
+};
+
+const CLOSERS: Record<Tone, string[]> = {
+  bold: ['No fluff. Just the beans.', 'Do it scared. Ship it anyway.', 'Your move.'],
+  warm: ['Come taste it with us. ☕', 'We saved you a cup.', 'See you at the bar.'],
+  expert: ['Full data on request.', 'Methodology in the comments.', 'Happy to share the spreadsheet.'],
+};
+
+const SUFFIX: Record<string, (t: string) => string> = {
+  linkedin: () => '',
+  instagram: t => `\n\n#${kw(t).join(' #') || 'smallbatch'} #specialtycoffee #roasterylife #pdxcoffee`,
+  x: () => '\n\n(that\'s the post.)',
+  facebook: () => '\n\n📍 Ember & Oak · Portland · open 7–6',
+  tiktok: () => '\n\n#coffeetok #smallbusiness #behindthescenes',
+  youtube: () => '\n\n⏱ Chapters + the full notes in the description.',
+  pinterest: () => '\n\nFollow for a new checklist every week.',
+  gmb: () => '\n\n⭐ Love it? Leave a review — it genuinely helps.',
+};
+
+function generateCopy(plat: Platform, tone: Tone, topicRaw: string, memory: Record<string, number>): string {
+  const t = topicRaw.trim().toLowerCase() || 'our spring roast';
+  const [hook, hi] = pick(HOOKS[tone], memory[`${tone}-hook`] ?? -1);
+  memory[`${tone}-hook`] = hi;
+  const bodies = BODIES[plat] ?? BODIES.linkedin;
+  const [body, bi] = pick(bodies, memory[`${plat}-body`] ?? -1);
+  memory[`${plat}-body`] = bi;
+  const [closer, ci] = pick(CLOSERS[tone], memory[`${tone}-closer`] ?? -1);
+  memory[`${tone}-closer`] = ci;
+  const suffix = (SUFFIX[plat] ?? (() => ''))(t);
+  return `${hook(t)}\n\n${body(t)}\n\n${closer}${suffix}`;
+}
 
 function useLeadScores() {
   const { s } = useApp();
@@ -69,24 +161,24 @@ function useLeadScores() {
 }
 
 const BAND = (score: number) =>
-  score >= 70 ? { label: 'Hot', color: '#0e7a52', tint: '#e2efe7' }
-    : score >= 45 ? { label: 'Warm', color: '#a96f14', tint: '#f7ecd6' }
-      : { label: 'Nurture', color: '#6e776f', tint: '#eceee7' };
+  score >= 70 ? { label: 'Hot', color: '#e5484d', tint: '#ffe0df' }
+    : score >= 45 ? { label: 'Warm', color: '#e86a17', tint: '#ffe9d4' }
+      : { label: 'Nurture', color: '#3d6bff', tint: '#e3eaff' };
 
 /* ================= tool panels ================= */
 
 function WriterPanel() {
   const { a } = useApp();
   const [topic, setTopic] = useState('spring blend wholesale launch');
-  const [tone, setTone] = useState<'bold' | 'warm' | 'expert'>('bold');
+  const [tone, setTone] = useState<Tone>('bold');
   const [plat, setPlat] = useState<Platform>('linkedin');
   const { text, busy, stream } = useStreamer();
   const [variants, setVariants] = useState<{ plat: Platform; body: string }[]>([]);
+  const memory = useRef<Record<string, number>>({});
 
   const generate = () => {
-    const gen = POST_IDEAS[plat] ?? POST_IDEAS.linkedin;
-    const body = gen(topic) + (tone === 'bold' ? '\n\nNo fluff. Just the beans.' : tone === 'warm' ? '\n\nCome taste it with us.' : '\n\nData on request.');
-    stream(body, () => setVariants(v => [{ plat, body }, ...v.filter(x => x.plat !== plat)].slice(0, 3)));
+    const body = generateCopy(plat, tone, topic, memory.current);
+    stream(body, () => setVariants(v => [{ plat, body }, ...v.filter(x => !(x.plat === plat && x.body === body))].slice(0, 4)));
   };
 
   return (
@@ -95,15 +187,15 @@ function WriterPanel() {
         <SectionTitle>Compose prompt</SectionTitle>
         <label className="block">
           <span className="mb-1 block font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-mut">What's the post about?</span>
-          <input className="h-9 w-full rounded-lg border border-line bg-card px-3 text-[13px] outline-none transition focus:border-moss focus:ring-2 focus:ring-moss/15" value={topic} onChange={e => setTopic(e.target.value)} />
+          <input className="h-9 w-full rounded-lg border-[1.5px] border-ink bg-card px-3 text-[13px] font-medium outline-none transition placeholder:text-faint focus:shadow-hard-sm" value={topic} onChange={e => setTopic(e.target.value)} />
         </label>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Seg size="sm" value={tone} onChange={setTone} options={[{ id: 'bold', label: 'Bold' }, { id: 'warm', label: 'Warm' }, { id: 'expert', label: 'Expert' }]} />
           <div className="ml-auto flex -space-x-1">
-            {(['linkedin', 'instagram', 'x', 'facebook'] as Platform[]).map(p => (
+            {(Object.keys(PLATFORMS) as Platform[]).map(p => (
               <button key={p} onClick={() => setPlat(p)} title={PLATFORMS[p].name}
-                className={cx('rounded-md p-0.5 transition-all', plat === p ? 'bg-mint ring-1 ring-moss/40' : 'opacity-50 hover:opacity-90')}>
-                <PlatformIcon p={p} size={20} />
+                className={cx('rounded-md p-0.5 transition-all', plat === p ? 'bg-butter ring-2 ring-ink shadow-hard-sm' : 'opacity-45 hover:opacity-90')}>
+                <PlatformIcon p={p} size={19} />
               </button>
             ))}
           </div>
@@ -140,33 +232,56 @@ function WriterPanel() {
   );
 }
 
+const SUBJECT_POOL: ((c: string) => { s: string; open: number })[] = [
+  c => ({ s: `☕ The ${c.split(' ')[0]} drop your café has been asking about`, open: 44 }),
+  c => ({ s: `Last call: ${c} ends Friday`, open: 41 }),
+  () => ({ s: 'Your spring menu is missing this one drink', open: 38 }),
+  c => ({ s: `${cap(c)} — 24h ship, small batch`, open: 36 }),
+  () => ({ s: 'Quick question about your cold brew program', open: 52 }),
+  c => ({ s: `We tested ${c.split(' ')[0]} 40 ways. One won.`, open: 47 }),
+  c => ({ s: `${cap(c)}: the numbers behind our best week yet`, open: 43 }),
+  () => ({ s: '3 signs your coffee program is leaving money on the table', open: 49 }),
+  c => ({ s: `You asked, we listened — ${c} is here`, open: 40 }),
+  () => ({ s: 'The 2-minute read every café owner should see', open: 37 }),
+  c => ({ s: `${cap(c)} + your espresso bar = ?`, open: 45 }),
+  () => ({ s: 'One tweak that cut our prep time in half', open: 42 }),
+];
+
 function SubjectPanel() {
   const { a } = useApp();
   const [ctx, setCtx] = useState('cold brew summer drop for wholesale partners');
   const { busy, stream } = useStreamer();
   const [lines, setLines] = useState<{ s: string; open: number }[]>([]);
   const [reveal, setReveal] = useState(0);
+  const used = useRef<number[]>([]);
 
   const generate = () => {
-    const base = [
-      { s: `☕ The ${ctx.split(' ')[0]} drop your café has been asking about`, open: 44 },
-      { s: `Last call: ${ctx} ends Friday`, open: 41 },
-      { s: `Your spring menu is missing this one drink`, open: 38 },
-      { s: `${ctx} — 24h ship, small batch`, open: 36 },
-      { s: `Quick question about your cold brew program`, open: 52 },
-    ];
+    const c = ctx.trim().toLowerCase() || 'our summer drop';
+    // draw 5 distinct templates, never repeating the previous batch
+    const poolIdx = SUBJECT_POOL.map((_, i) => i);
+    const fresh = poolIdx.filter(i => !used.current.includes(i));
+    const source = fresh.length >= 5 ? fresh : poolIdx;
+    const drawn: number[] = [];
+    while (drawn.length < 5) {
+      const i = source.splice(Math.floor(Math.random() * source.length), 1)[0];
+      drawn.push(i);
+      if (source.length === 0) break;
+    }
+    used.current = drawn;
+    const base = drawn.map(i => {
+      const line = SUBJECT_POOL[i](c);
+      return { s: line.s, open: Math.min(58, Math.max(31, line.open + Math.floor(Math.random() * 7) - 3)) };
+    });
     setLines(base); setReveal(0);
-    setLines([]);
     stream('x'.repeat(10), () => undefined);
-    base.forEach((b, i) => window.setTimeout(() => setReveal(i + 1), 200 + i * 220));
-    window.setTimeout(() => setLines(base), 120);
+    base.forEach((_, i) => window.setTimeout(() => setReveal(i + 1), 200 + i * 220));
   };
 
   return (
     <Card className="p-4">
       <SectionTitle>Campaign context</SectionTitle>
       <div className="flex gap-2">
-        <input className="h-9 flex-1 rounded-lg border border-line bg-card px-3 text-[13px] outline-none transition focus:border-moss focus:ring-2 focus:ring-moss/15" value={ctx} onChange={e => setCtx(e.target.value)} />
+        <input className="h-9 flex-1 rounded-lg border-[1.5px] border-ink bg-card px-3 text-[13px] font-medium outline-none transition placeholder:text-faint focus:shadow-hard-sm" value={ctx} onChange={e => setCtx(e.target.value)} />
         <Btn onClick={generate} disabled={busy}><Icon name="bolt" size={14} /> Score 5</Btn>
       </div>
       {lines.length > 0 && (
@@ -185,15 +300,38 @@ function SubjectPanel() {
   );
 }
 
+const REPLY_POOL: Record<string, ((who: string, last: string) => string)[]> = {
+  dm: [
+    (who, last) => `Hi ${who} — thanks for the message! Short answer: yes, we can do that. I'll send pricing and current availability over today. Anything specific you'd like included?`,
+    (who) => `Hey ${who}! Great timing — we just opened slots for next month. Want me to pencil you in for a quick call this week?`,
+    (who) => `${who} 🙌 appreciate you reaching out. Let me check with the roastery team and get back to you before end of day with details.`,
+  ],
+  comment: [
+    (who) => `Thank you ${who}! That genuinely made our morning. The next batch drops Friday — we'll save you one if you're quick. ☕`,
+    (who) => `${who} you have great taste 😄 that one's our most-requested roast — link's in bio if you want the full tasting notes.`,
+    (who) => `Love this, ${who}! We cupped it three times before shipping. Come by the bar if you're ever in Portland — first pour's on us.`,
+  ],
+  mention: [
+    (who) => `Thanks for the shoutout, ${who}! We're blushing. 🙏 If you ever want to collab on a roast, our DMs are open.`,
+    (who) => `${who} — this means a lot! We'll share it on our story with full credit. Keep the great content coming.`,
+  ],
+};
+
 function ReplyPanel() {
   const { s, a } = useApp();
   const open = s.threads.filter(t => t.status !== 'resolved');
   const [sel, setSel] = useState(open[0]?.id ?? '');
   const { text, busy, stream } = useStreamer();
   const thread = s.threads.find(t => t.id === sel);
+  const lastReply = useRef<Record<string, number>>({});
   const generate = () => {
     if (!thread) return;
-    stream(`Hi ${thread.person.replace('@', '')} — thanks so much for reaching out! Yes, we can absolutely help with that. I've looped in our team and we'll get you pricing and availability within the day. Anything else you'd like us to include?`);
+    const pool = REPLY_POOL[thread.kind] ?? REPLY_POOL.dm;
+    const who = thread.person.replace('@', '').split(' ')[0];
+    const last = thread.messages[thread.messages.length - 1]?.text ?? '';
+    const [body, idx] = pick(pool, lastReply.current[thread.id] ?? -1);
+    lastReply.current[thread.id] = idx;
+    stream(body(who, last));
   };
   return (
     <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-[260px_1fr]">
@@ -214,7 +352,7 @@ function ReplyPanel() {
         </div>
       </Card>
       <Card className="p-4">
-        <SectionTitle right={thread ? <Pill color="#0e7a52" tint="#e2efe7">{PLATFORMS[thread.platform].name}</Pill> : undefined}>Draft reply</SectionTitle>
+        <SectionTitle right={thread ? <Pill color="#3d6bff" tint="#e3eaff">{PLATFORMS[thread.platform].name}</Pill> : undefined}>Draft reply</SectionTitle>
         {thread && <p className="mb-3 rounded-lg bg-paper/70 px-3 py-2 text-[11.5px] italic text-mut">"{thread.messages[thread.messages.length - 1].text}"</p>}
         <div className="flex items-center gap-2">
           <Btn onClick={generate} disabled={busy || !thread}><Icon name={busy ? 'refresh' : 'bolt'} size={14} /> {busy ? 'Drafting…' : 'Suggest reply'}</Btn>
@@ -247,7 +385,7 @@ function SentimentPanel() {
       setBusy(false);
     }, 700);
   };
-  const color = res ? (res.score >= 66 ? '#0e7a52' : res.score >= 40 ? '#a96f14' : '#c2483b') : '#6e776f';
+  const color = res ? (res.score >= 66 ? '#2e9e4f' : res.score >= 40 ? '#e86a17' : '#e5484d') : '#75756b';
   return (
     <Card className="p-4">
       <SectionTitle>Analyze a message</SectionTitle>
@@ -369,17 +507,17 @@ export function AIStudio() {
   const active = TOOLS.find(t => t.id === tool) ?? TOOLS[0];
   return (
     <div className="space-y-3.5">
-      <div className="glow-top relative overflow-hidden rounded-xl border border-nightline bg-night p-4 text-card">
+      <div className="glow-top relative overflow-hidden rounded-xl border-2 border-ink bg-night p-4 text-card shadow-hard-lg">
         <div className="bg-dots pointer-events-none absolute inset-0 opacity-30" />
         <div className="relative flex flex-wrap items-center gap-4">
-          <span className="grid h-11 w-11 place-items-center rounded-xl bg-moss/20 text-moss"><Icon name="bolt" size={22} /></span>
+          <span className="sticker grid h-11 w-11 place-items-center rounded-xl border-2 border-ink bg-lime text-ink shadow-hard-sm"><Icon name="bolt" size={22} sw={2.2} /></span>
           <div className="min-w-[220px] flex-1">
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-moss">Phase 3 · Intelligence</p>
+            <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-lime">Phase 3 · Intelligence</p>
             <h1 className="font-display text-[24px] font-bold leading-tight tracking-tight">AI Studio <span className="text-nighttx">— {active.label}</span></h1>
             <p className="text-[12px] text-nighttx">{active.blurb}. Runs on-device in the demo — your data never leaves the workspace.</p>
           </div>
-          <div className="flex items-center gap-2 font-mono text-[10px] text-nighttx">
-            <span className="live-dot h-1.5 w-1.5 rounded-full bg-moss" /> model warm · $0 marginal cost
+          <div className="flex items-center gap-2 font-mono text-[10px] font-bold text-nighttx">
+            <span className="live-dot h-1.5 w-1.5 rounded-full bg-lime" /> model warm · $0 marginal cost
           </div>
         </div>
       </div>

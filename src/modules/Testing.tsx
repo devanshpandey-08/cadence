@@ -22,17 +22,17 @@ function ConsoleHeader({ passed, failed, totalMs, running, onRunAll }: {
   const ran = passed + failed;
   const all = ran === TOTAL_TESTS;
   const status = running ? 'RUNNING' : failed > 0 ? 'FAILING' : all && passed > 0 ? 'ALL GREEN' : 'IDLE';
-  const statusColor = running ? '#c08a1e' : failed > 0 ? '#c2483b' : all && passed > 0 ? '#0e7a52' : '#8fa096';
+  const statusColor = running ? '#ffd954' : failed > 0 ? '#ff8a8d' : all && passed > 0 ? '#c8f169' : '#a9a99b';
   return (
     <div className="overflow-hidden rounded-xl border border-nightline bg-night text-card shadow-lift">
       <div className="flex items-center gap-2 border-b border-nightline px-4 py-2.5">
-        <span className="h-2.5 w-2.5 rounded-full bg-danger/80" /><span className="h-2.5 w-2.5 rounded-full bg-amber/80" /><span className="h-2.5 w-2.5 rounded-full bg-moss/80" />
+        <span className="h-2.5 w-2.5 rounded-full bg-danger/90" /><span className="h-2.5 w-2.5 rounded-full bg-butter/90" /><span className="h-2.5 w-2.5 rounded-full bg-lime" />
         <span className="ml-2 font-mono text-[11px] text-nighttx">cadence · qa console</span>
         <span className="ml-auto hidden font-mono text-[10px] text-nighttx sm:block">same reducer + action core the app runs — zero mocks</span>
       </div>
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3 px-5 py-4">
         <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-xl bg-moss/15 text-moss"><Icon name="terminal" size={22} /></span>
+          <span className="grid h-11 w-11 place-items-center rounded-xl border-2 border-ink bg-lime text-ink shadow-hard-sm"><Icon name="terminal" size={22} sw={2.2} /></span>
           <div>
             <p className="font-mono text-[12px] text-nighttx">$ cadence qa --run-all</p>
             <p className="font-display text-[22px] font-bold leading-tight tracking-tight">
@@ -42,13 +42,13 @@ function ConsoleHeader({ passed, failed, totalMs, running, onRunAll }: {
           </div>
         </div>
         <div className="flex items-center gap-5 font-mono text-[12px]">
-          <span><span className="font-bold text-moss">{passed}</span> <span className="text-nighttx">pass</span></span>
+          <span><span className="font-bold text-lime">{passed}</span> <span className="text-nighttx">pass</span></span>
           <span><span className={cx('font-bold', failed ? 'text-danger' : 'text-nighttx')}>{failed}</span> <span className="text-nighttx">fail</span></span>
           <span><span className="font-bold text-card">{(totalMs / 1000).toFixed(2)}s</span> <span className="text-nighttx">runtime</span></span>
         </div>
         <div className="ml-auto flex items-center gap-3">
           <div className="h-1.5 w-36 overflow-hidden rounded-full bg-nightline">
-            <div className="h-full rounded-full bg-moss transition-all duration-300" style={{ width: `${(ran / TOTAL_TESTS) * 100}%` }} />
+            <div className="h-full rounded-full bg-lime transition-all duration-300" style={{ width: `${(ran / TOTAL_TESTS) * 100}%` }} />
           </div>
           <Btn onClick={onRunAll} disabled={running} variant="primary">
             <Icon name={running ? 'refresh' : 'play'} size={14} /> {running ? 'Running…' : 'Run full suite'}

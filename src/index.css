@@ -20,11 +20,11 @@
   --color-pine: #35352b;
   --color-mint: #eaf6d0;
 
-  /* dark surfaces */
-  --color-night: #0f0f0b;
-  --color-night2: #1d1d15;
-  --color-nightline: #313126;
-  --color-nighttx: #a9a99b;
+  /* dark surfaces — warm charcoal, not void black */
+  --color-night: #191911;
+  --color-night2: #232318;
+  --color-nightline: #3a3a2c;
+  --color-nighttx: #b3b3a4;
 
   /* the loud set */
   --color-lime: #c8f169;
@@ -73,7 +73,7 @@ body::after {
   inset: 0;
   z-index: 95;
   pointer-events: none;
-  opacity: 0.05;
+  opacity: 0.035;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 

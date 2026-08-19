@@ -10,7 +10,7 @@ import { Avatar, Btn, Card, CountUp, EmptyState, Pill, SectionTitle, Seg, Spark,
 const ACT_ICON: Record<string, string> = { email: 'mail', call: 'phone', meeting: 'video', note: 'file', form: 'layout', social: 'message', deal: 'kanban' };
 
 const SOURCE_COLORS: Record<Source, string> = {
-  Form: '#3e7cb1', Import: '#7a5fa8', Social: '#0e7a52', Manual: '#6e776f', Webinar: '#a96f14', Chat: '#2f8f83',
+  Form: '#3d6bff', Import: '#8a63d2', Social: '#2e9e4f', Manual: '#75756b', Webinar: '#e86a17', Chat: '#29c6a7',
 };
 
 function KpiTile({ label, value, prefix, suffix, series, color, delta, foot, icon }: {
@@ -62,12 +62,12 @@ function LaunchChecklist() {
 
   return (
     <div className="anim-rise relative overflow-hidden rounded-xl border border-nightline bg-night px-4 py-3.5">
-      <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(420px 160px at 8% -20%, rgb(14 122 82 / 0.28), transparent 70%)' }} />
+      <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(420px 160px at 8% -20%, rgb(200 241 105 / 0.16), transparent 70%)' }} />
       <div className="relative flex flex-wrap items-center gap-4">
         <div className="relative h-[54px] w-[54px] shrink-0">
           <svg width="54" height="54" viewBox="0 0 54 54" className="-rotate-90">
             <circle cx="27" cy="27" r="22" fill="none" stroke="#29332b" strokeWidth="5" />
-            <circle cx="27" cy="27" r="22" fill="none" stroke="#0e7a52" strokeWidth="5" strokeLinecap="round"
+            <circle cx="27" cy="27" r="22" fill="none" stroke="#c8f169" strokeWidth="5" strokeLinecap="round"
               strokeDasharray={C} strokeDashoffset={C - (doneCount / items.length) * C}
               className="transition-all duration-700 ease-out" />
           </svg>
@@ -76,7 +76,7 @@ function LaunchChecklist() {
         <div className="min-w-[180px] flex-1">
           <p className="flex items-center gap-2 font-display text-[14.5px] font-bold tracking-tight text-card">
             Launch checklist
-            {allDone && <span className="rounded-full bg-moss px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-card">All set</span>}
+            {allDone && <span className="rounded-full border-[1.5px] border-ink bg-lime px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-wider text-ink">All set</span>}
           </p>
           <p className="mt-0.5 text-[11px] text-nighttx">
             {allDone ? 'Setup complete — you hit time-to-value in under a day. That\'s the whole point.' : 'The goal: first post scheduled or first contact added within 24 hours.'}
@@ -86,8 +86,8 @@ function LaunchChecklist() {
           {items.map(i => (
             <button key={i.id} onClick={() => a.nav(i.view)}
               className={cx('flex items-center gap-1.5 rounded-full border py-1 pl-1.5 pr-2.5 text-[10.5px] font-semibold transition-all active:scale-95',
-                i.done ? 'border-moss/40 bg-moss/15 text-moss' : 'border-nightline bg-night2/70 text-nighttx hover:border-moss/50 hover:text-card')}>
-              <span className={cx('grid h-4 w-4 place-items-center rounded-full', i.done ? 'bg-moss text-card' : 'border border-nightline')}>
+                i.done ? 'border-lime/60 bg-lime/15 text-lime' : 'border-nightline bg-night2/70 text-nighttx hover:border-lime/40 hover:text-card')}>
+              <span className={cx('grid h-4 w-4 place-items-center rounded-full', i.done ? 'bg-lime text-ink' : 'border border-nightline text-nighttx')}>
                 {i.done ? <Icon name="check" size={9} sw={3.2} /> : <Icon name={i.icon} size={8} />}
               </span>
               {i.label}
@@ -401,13 +401,13 @@ export function Dashboard() {
       {/* one-liner strip */}
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-nightline bg-night px-5 py-4">
         <p className="font-display text-[15px] font-semibold tracking-tight text-card">
-          Buffer schedules posts. HubSpot tracks customers. <span className="text-moss">Cadence does both — in one database.</span>
+          Buffer schedules posts. HubSpot tracks customers. <span className="text-lime">Cadence does both — in one database.</span>
         </p>
         <div className="flex items-center gap-4 font-mono text-[11px] text-nighttx">
           <span><span className="text-card/85">Buffer $60</span> + HubSpot $50 + Mailchimp $30</span>
           <span className="text-card/40">=</span>
           <span className="text-card/85 line-through decoration-danger/70">$140/mo</span>
-          <span className="rounded-md bg-moss px-2 py-1 font-bold text-card">$79/mo here</span>
+          <span className="rounded-md border-[1.5px] border-ink bg-lime px-2 py-1 font-bold text-ink">$79/mo here</span>
         </div>
       </div>
     </div>
