@@ -7,7 +7,8 @@ import { isoOf } from '../meta';
 export type ReqTag =
   | 'core-crm' | 'pipeline' | 'tasks' | 'calendar' | 'publisher'
   | 'forms' | 'pages' | 'email' | 'approvals' | 'inbox' | 'scheduler' | 'roles'
-  | 'security' | 'resilience' | 'scale' | 'api';
+  | 'security' | 'resilience' | 'scale' | 'api'
+  | 'integration' | 'e2e' | 'hardening' | 'chaos' | 'fuzz' | 'edge' | 'regression';
 
 export interface TestResult {
   id: string;

@@ -2,6 +2,7 @@ import type { Suite, TestEnv } from './framework';
 import { assert, budget, createEnv, eq, measure, syntheticContacts, syntheticEvents, syntheticPosts } from './framework';
 import { parsePersisted } from '../store';
 import { probeStorage } from './scaleModel';
+import { EXTENDED_SUITES, EXT_TOTAL } from './extended';
 import { authApi, DEMO_PASSWORD } from '../services/backend';
 import { csvEscape, toCsv } from '../services/csv';
 import { LIST_SIZES, seedState } from '../data';
@@ -459,8 +460,11 @@ const scale: Suite = {
   ],
 };
 
-export const SUITES: Suite[] = [utilities, integrity, crm, marketing, security, scale];
+const CORE_SUITES: Suite[] = [utilities, integrity, crm, marketing, security, scale];
+/** Full catalog: 6 core suites + 7 rigorous-layer suites (integration → regression guards). */
+export const SUITES: Suite[] = [...CORE_SUITES, ...EXTENDED_SUITES];
 export const TOTAL_TESTS = SUITES.reduce((n, s) => n + s.tests.length, 0);
+export { EXT_TOTAL };
 
 /* ---------- requirement coverage map ---------- */
 export const REQ_LABEL: Record<string, { label: string; spec: string }> = {
