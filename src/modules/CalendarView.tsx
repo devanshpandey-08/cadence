@@ -25,6 +25,11 @@ function PostChip({ p, onClick, wide }: { p: Post; onClick: () => void; wide?: b
       <span className={cx('min-w-0 flex-1 truncate text-[10.5px] font-medium leading-tight', p.status === 'draft' ? 'text-mut italic' : 'text-ink2')}>
         {p.text}
       </span>
+      {p.status === 'published' && (p.likes ?? 0) > 0 && (
+        <span className="tnum flex shrink-0 items-center gap-0.5 font-mono text-[8.5px] font-bold text-ink2" title={`${p.likes} likes · ${p.comments ?? 0} comments · ${p.shares ?? 0} shares`}>
+          <Icon name="heart" size={9} />{p.likes}
+        </span>
+      )}
       {p.platforms.length > 1 && <span className="shrink-0 font-mono text-[8.5px] font-bold text-mut">+{p.platforms.length - 1}</span>}
       <span className="shrink-0" style={{ color: st.color }} title={st.label}>
         <Icon name={STATUS_ICON[p.status]} size={11} />

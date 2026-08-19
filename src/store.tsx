@@ -6,7 +6,7 @@ import type {
 import confetti from 'canvas-confetti';
 import { authApi } from './services/backend';
 import { LIST_SIZES, seedState } from './data';
-import { addDays, isoOf, stageMeta, uid } from './meta';
+import { addDays, isoOf, PLATFORMS, stageMeta, uid } from './meta';
 
 export const KEY = 'cadence-v2';
 
@@ -366,9 +366,72 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     try {
       const { toasts: _t, me: _m, ...rest } = s;
-      localStorage.setItem(KEY, JSON.stringify({ version: 2, data: rest }));
+      localStorage.setItem(KEY, JSON.stringify({ version: 2, "data": rest }));
     } catch { /* storage full or unavailable */ }
   }, [s]);
+
+  /* ---------- ambient life ----------
+     The workspace keeps breathing while you watch. In production these events
+     stream in over WebSocket from the sync workers; here they're simulated —
+     but they flow through the exact same reducer as real user actions. */
+  useEffect(() => {
+    const NAMES = ['Ava Lindqvist', 'Marcus Webb', 'Noor Haddad', 'Tom Okafor', 'Lena Fischer', 'Diego Ramos'];
+    const COMPANIES = ['Fjord Coffee Co.', 'Bean & Barrel', 'Kettle House', 'North Loop Café', 'Grindhouse PDX'];
+    const MSGS = [
+      'Is the spring blend available for wholesale yet?',
+      'Do you ship to Canada? Looking at two locations.',
+      'That latte art reel was 🔥 — what machine is that?',
+      'Can we get a sample pack before committing?',
+      'When does the summer cold brew drop?',
+    ];
+    const t = window.setInterval(() => {
+      const st = ref.current;
+      if (!st.me) return; // signed out — no noise on the login screen
+      const push = (text: string, kind: 'auto' | 'system' = 'system') =>
+        dispatch({ t: 'notif+', n: { id: uid(), text, at: isoOf(new Date()), read: false, kind } });
+      const roll = Math.random();
+      if (roll < 0.42 && st.threads.length > 0) {
+        // incoming social message — the inbox goes live
+        const th = st.threads[Math.floor(Math.random() * st.threads.length)];
+        dispatch({
+          t: 'thread~', id: th.id,
+          p: { status: 'unread', messages: [...th.messages, { id: uid(), from: 'them', text: MSGS[Math.floor(Math.random() * MSGS.length)], at: isoOf(new Date()) }] },
+        });
+        push(`New ${th.kind} from ${th.person} on ${PLATFORMS[th.platform].name}`);
+      } else if (roll < 0.72) {
+        // engagement tick on a published post
+        const pubs = st.posts.filter(p => p.status === 'published');
+        if (pubs.length > 0) {
+          const p = pubs[Math.floor(Math.random() * pubs.length)];
+          const likes = (p.likes ?? 0) + 3 + Math.floor(Math.random() * 18);
+          dispatch({
+            t: 'post~', id: p.id,
+            p: { likes, comments: (p.comments ?? 0) + (Math.random() < 0.5 ? 1 : 0), shares: (p.shares ?? 0) + (Math.random() < 0.3 ? 1 : 0) },
+          });
+          if (likes > 45) push(`A post is gaining traction — ${likes} likes on ${PLATFORMS[p.platforms[0]].name}`, 'auto');
+        }
+      } else {
+        // a form converts — a new contact lands in the CRM
+        const form = st.forms[0];
+        const name = NAMES[Math.floor(Math.random() * NAMES.length)];
+        const co = COMPANIES[Math.floor(Math.random() * COMPANIES.length)];
+        const today = isoOf(new Date());
+        dispatch({
+          t: 'contact+',
+          c: {
+            id: uid(), name,
+            email: `${name.split(' ')[0].toLowerCase()}@${co.split(' ')[0].toLowerCase().replace(/[^a-z]/g, '')}.com`,
+            company: co, title: 'Owner', source: 'Form', tags: ['lead'], owner: 'Maya Chen',
+            createdAt: today, lastActivity: today,
+            timeline: [{ id: uid(), type: 'form', text: `Filled out "${form?.name ?? 'Demo request'}"`, at: today }],
+          },
+        });
+        if (form) dispatch({ t: 'form~', id: form.id, p: { submissions: form.submissions + 1 } });
+        push(`New lead: ${name} via "${form?.name ?? 'your form'}"`, 'auto');
+      }
+    }, 24000);
+    return () => window.clearInterval(t);
+  }, [dispatch]);
 
   const a = useMemo<Api>(() => makeApi({
     get: () => ref.current,

@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../store';
-import { cx, Icon, kfmt, PLATFORMS, PlatformIcon } from '../meta';
+import { cx, Icon, kfmt, PLATFORMS, PlatformIcon, uid } from '../meta';
 import type { Platform } from '../types';
 import { Btn, Card, CountUp, IconBtn, Pill, SectionTitle, Seg, Spark } from '../components/ui';
 
@@ -11,7 +11,7 @@ interface Mention {
   sent: Sent; reach: number; ago: string; keyword: string;
 }
 
-const MENTIONS: Mention[] = [
+const SEED_MENTIONS: Mention[] = [
   { id: 'm1', platform: 'x', author: 'Fred K', handle: '@flatwhitefred', text: 'the ember & oak cold brew got me through finals week. genuinely the best in the city', sent: 'pos', reach: 12400, ago: '12m', keyword: 'cold brew' },
   { id: 'm2', platform: 'instagram', author: 'Oat Milk Only', handle: '@oatmilkonly', text: 'tasted the spring blend at @emberandoak — floral, bright, zero bitterness. recipe notes in our story', sent: 'pos', reach: 41200, ago: '34m', keyword: 'spring blend' },
   { id: 'm3', platform: 'tiktok', author: 'Felix Marsh', handle: '@felixbrews', text: 'latte art with ember & oak beans hits different 🙌 dialing guide pt.2 tomorrow', sent: 'pos', reach: 88300, ago: '1h', keyword: 'latte art' },
@@ -23,6 +23,16 @@ const MENTIONS: Mention[] = [
 ];
 
 const KEYWORDS = ['spring blend', 'cold brew', 'wholesale', 'shipping', 'cupping', 'huila'];
+
+const INCOMING: Omit<Mention, 'id' | 'ago'>[] = [
+  { platform: 'instagram', author: 'Rosa Delgado', handle: '@rosabrews', text: 'pour-over bar stocked with @emberandoak huila — customers keep asking what it is', sent: 'pos', reach: 2300, keyword: 'huila' },
+  { platform: 'x', author: 'Kenji Sato', handle: '@kenjisips', text: 'ember & oak wholesale sample arrived in 2 days. packaging is lovely, cupping tomorrow', sent: 'pos', reach: 940, keyword: 'wholesale' },
+  { platform: 'facebook', author: 'Harbor Books Café', handle: 'Harbor Books', text: 'third month on the ember & oak subscription — zero missed deliveries so far', sent: 'pos', reach: 410, keyword: 'wholesale' },
+  { platform: 'tiktok', author: 'Mia Torres', handle: '@mialattes', text: 'rating every cold brew in portland pt.4 — ember & oak is currently #1, fight me', sent: 'pos', reach: 51200, keyword: 'cold brew' },
+  { platform: 'x', author: 'Dana W', handle: '@danadrinks', text: 'spring blend espresso pulled a little sour on my setup. anyone else? might be my grind', sent: 'neu', reach: 620, keyword: 'spring blend' },
+  { platform: 'linkedin', author: 'Marcus Lindt', handle: 'Lindt Hospitality Group', text: 'Shortlisting coffee partners for 6 venues. Impressed by Ember & Oak\'s traceability reporting.', sent: 'pos', reach: 1800, keyword: 'wholesale' },
+  { platform: 'instagram', author: 'Slow Mornings', handle: '@slowmorningspdx', text: 'cupping night was packed — the washed ethiopia flew off the table first', sent: 'neu', reach: 3300, keyword: 'cupping' },
+];
 
 const SENT_META: Record<Sent, { label: string; color: string; tint: string; icon: string }> = {
   pos: { label: 'Positive', color: '#0e7a52', tint: '#e2efe7', icon: 'trend' },
@@ -36,18 +46,33 @@ export function Listening() {
   const [kw, setKw] = useState<string | null>(null);
   const [newKw, setNewKw] = useState('');
   const [tracked, setTracked] = useState(KEYWORDS);
+  const [mentions, setMentions] = useState<Mention[]>(SEED_MENTIONS);
+  const [flash, setFlash] = useState(false);
+  const cursor = useRef(0);
 
-  const feed = useMemo(() => MENTIONS.filter(m =>
+  // new mentions stream in while you watch
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      const next = INCOMING[cursor.current % INCOMING.length];
+      cursor.current += 1;
+      setMentions(ms => [{ ...next, id: uid(), ago: 'now' }, ...ms].slice(0, 14));
+      setFlash(true);
+      window.setTimeout(() => setFlash(false), 1600);
+    }, 13000);
+    return () => window.clearInterval(t);
+  }, []);
+
+  const feed = useMemo(() => mentions.filter(m =>
     (sent === 'all' || m.sent === sent) && (!kw || m.keyword === kw)
-  ), [sent, kw]);
+  ), [mentions, sent, kw]);
 
   const counts = {
-    pos: MENTIONS.filter(m => m.sent === 'pos').length,
-    neu: MENTIONS.filter(m => m.sent === 'neu').length,
-    neg: MENTIONS.filter(m => m.sent === 'neg').length,
+    pos: mentions.filter(m => m.sent === 'pos').length,
+    neu: mentions.filter(m => m.sent === 'neu').length,
+    neg: mentions.filter(m => m.sent === 'neg').length,
   };
-  const posRate = Math.round((counts.pos / MENTIONS.length) * 100);
-  const reach = MENTIONS.reduce((n, m) => n + m.reach, 0);
+  const posRate = Math.round((counts.pos / mentions.length) * 100);
+  const reach = mentions.reduce((n, m) => n + m.reach, 0);
 
   const competitors = [
     { name: 'Ember & Oak', sov: 42, color: '#0e7a52', you: true },
@@ -66,7 +91,7 @@ export function Listening() {
     <div className="space-y-3.5">
       <div className="grid grid-cols-2 gap-3.5 lg:grid-cols-4">
         {[
-          { l: 'Mentions · 24h', v: MENTIONS.length, icon: 'message', c: '#0e7a52' },
+          { l: 'Mentions · 24h', v: mentions.length, icon: 'message', c: '#0e7a52' },
           { l: 'Positive share', v: posRate, suffix: '%', icon: 'heart', c: '#2f8f83' },
           { l: 'Potential reach', v: reach, icon: 'globe', c: '#3e7cb1', fmt: kfmt },
           { l: 'Needs response', v: counts.neg, icon: 'alert', c: '#c2483b' },
@@ -85,7 +110,10 @@ export function Listening() {
         <Card className="overflow-hidden">
           <div className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3">
             <p className="font-display text-[14px] font-bold text-ink">Live mention feed</p>
-            <span className="flex items-center gap-1.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-moss"><span className="live-dot h-1.5 w-1.5 rounded-full bg-moss" /> streaming</span>
+            <span className={cx('flex items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider transition-colors duration-500',
+              flash ? 'bg-mint text-pine' : 'text-moss')}>
+              <span className="live-dot h-1.5 w-1.5 rounded-full bg-moss" /> {flash ? 'new mention' : 'streaming'}
+            </span>
             <div className="ml-auto"><Seg size="sm" value={sent} onChange={setSent} options={[{ id: 'all', label: 'All' }, { id: 'pos', label: 'Positive' }, { id: 'neu', label: 'Neutral' }, { id: 'neg', label: 'Negative' }]} /></div>
           </div>
           <div className="divide-y divide-line/70">
@@ -97,7 +125,7 @@ export function Listening() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="text-[12.5px] font-bold text-ink">{m.author}</p>
-                      <span className="font-mono text-[10px] text-faint">{m.handle} · {m.ago} ago</span>
+                      <span className="font-mono text-[10px] text-faint">{m.handle} · {m.ago === 'now' ? 'just now' : `${m.ago} ago`}</span>
                       <span className="ml-auto flex items-center gap-1 font-mono text-[9.5px] text-faint"><Icon name="eye" size={11} /> {kfmt(m.reach)}</span>
                     </div>
                     <p className="mt-0.5 text-[12.5px] leading-relaxed text-ink2">{m.text}</p>

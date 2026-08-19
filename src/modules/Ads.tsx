@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../store';
 import { cx, Icon, kfmt, money } from '../meta';
 import { Btn, Card, CountUp, Pill, SectionTitle, Toggle } from '../components/ui';
@@ -25,6 +25,26 @@ const PLAT_COLOR: Record<AdPlatform, string> = {
 export function Ads() {
   const { a } = useApp();
   const [camps, setCamps] = useState<AdCampaign[]>(SEED);
+
+  // campaigns keep buying while you watch — pacing, CTR and ROAS all recompute
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      setCamps(cs => cs.map(c => {
+        if (!c.active) return c;
+        const convDelta = Math.random() < 0.16 ? 1 : 0;
+        const aov = c.conversions > 0 ? c.revenue / c.conversions : 40;
+        return {
+          ...c,
+          spent: Math.min(c.budget, c.spent + 0.4 + Math.random() * 2.6),
+          impressions: c.impressions + Math.floor(30 + Math.random() * 240),
+          clicks: c.clicks + (Math.random() < 0.7 ? Math.floor(1 + Math.random() * 4) : 0),
+          conversions: c.conversions + convDelta,
+          revenue: c.revenue + convDelta * aov,
+        };
+      }));
+    }, 4000);
+    return () => window.clearInterval(t);
+  }, []);
 
   const totals = useMemo(() => {
     const spent = camps.reduce((n, c) => n + c.spent, 0);
