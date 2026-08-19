@@ -436,7 +436,9 @@ const scale: Suite = {
     T('x9', '100k contacts serialize inside the persistence budget', 'scale', () =>
       budget('100k serialize', 2500, () => {
         const json = JSON.stringify(syntheticContacts(100000));
-        assert(json.length > 40_000_000, 'payload sanity');
+        const mb = json.length / 1e6;
+        // ~230 B/record ⇒ 100k rows ≈ 23 MB; guard against both truncation and bloat
+        assert(mb > 15 && mb < 80, `payload sanity — got ${mb.toFixed(1)} MB, expected ~23 MB`);
       })),
     T('x10', 'activity feed merge stays linear at 100k events', 'scale', () =>
       budget('100k-event merge', 400, () => {
