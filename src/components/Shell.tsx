@@ -379,16 +379,27 @@ function UserMenu() {
   );
 }
 
+const GROUP_OF: Record<View, string> = {
+  dashboard: 'Overview', inbox: 'Overview', tasks: 'Overview',
+  contacts: 'CRM', deals: 'CRM',
+  calendar: 'Marketing', campaigns: 'Marketing', marketing: 'Marketing',
+  ai: 'Intelligence', listening: 'Intelligence', ads: 'Intelligence',
+  automations: 'Growth', calls: 'Growth',
+  testing: 'Workspace', settings: 'Workspace',
+};
+
 function Topbar({ onMenu }: { onMenu: () => void }) {
   const { s } = useApp();
   const can = useCanEdit();
   const t = TITLES[s.view];
   return (
-    <header className="sticky top-0 z-20 flex h-[58px] shrink-0 items-center gap-3 border-b border-line bg-paper/85 px-4 backdrop-blur-md md:px-6">
+    <header className="sticky top-0 z-20 flex h-[60px] shrink-0 items-center gap-3 border-b border-line bg-paper/85 px-4 backdrop-blur-md md:px-6">
       <IconBtn name="more" onClick={onMenu} className="md:hidden" title="Menu" />
-      <div className="min-w-0 flex-1">
-        <h1 className="truncate font-display text-[16.5px] font-bold leading-tight tracking-tight text-ink">{t.t}</h1>
-        <p className="hidden truncate text-[11px] leading-tight text-mut sm:block">{t.s}</p>
+      <div key={s.view} className="anim-rise min-w-0 flex-1">
+        <p className="flex items-center gap-1.5 font-mono text-[8.5px] font-semibold uppercase tracking-[0.22em] text-moss">
+          <span className="inline-block h-[5px] w-[5px] rounded-[1.5px] bg-moss" />{GROUP_OF[s.view]}
+        </p>
+        <h1 className="truncate font-display text-[17.5px] font-bold leading-tight tracking-tight text-ink">{t.t}</h1>
       </div>
       <SyncTicker />
       <SearchBox />
@@ -481,7 +492,7 @@ export function Shell({ children }: { children: ReactNode }) {
           <div className="glow-top pointer-events-none absolute inset-x-0 top-0 h-72" />
           <div className="anim-drift pointer-events-none absolute -right-32 top-24 h-96 w-96 rounded-full bg-moss/6 blur-3xl" />
           <div className="anim-drift2 pointer-events-none absolute -left-40 bottom-10 h-96 w-96 rounded-full bg-steel/6 blur-3xl" />
-          <div key={s.view} className="anim-rise relative mx-auto max-w-[1280px] px-4 py-5 md:px-6">
+          <div key={s.view} className="anim-rise relative mx-auto max-w-[1400px] px-4 py-6 md:px-7">
             {children}
           </div>
         </main>

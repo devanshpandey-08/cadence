@@ -153,8 +153,10 @@ export function Dashboard() {
       {/* header */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="font-mono text-[10.5px] font-medium uppercase tracking-[0.18em] text-mut">{fmtLong(TODAY)}</p>
-          <h1 className="mt-1 font-display text-[27px] font-bold leading-none tracking-tight text-ink">
+          <p className="flex items-center gap-2 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-moss">
+            <span className="inline-block h-[6px] w-[6px] rounded-[2px] bg-moss" />{fmtLong(TODAY)} · <LiveClock />
+          </p>
+          <h1 className="mt-2 font-display text-[30px] font-bold leading-[1.05] tracking-tight text-ink">
             {greeting}, {(s.me ?? s.users[0]).name.split(' ')[0]} — <span className="text-moss">{todayPosts.length} post{todayPosts.length === 1 ? '' : 's'}</span> go out today.
           </h1>
           <p className="mt-1.5 flex flex-wrap items-center gap-2 text-[13px] text-mut">
