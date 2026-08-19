@@ -455,6 +455,8 @@ export function Shell({ children }: { children: ReactNode }) {
         <Topbar onMenu={() => setMobileNav(true)} />
         <main className="bg-dots relative flex-1 overflow-y-auto">
           <div className="glow-top pointer-events-none absolute inset-x-0 top-0 h-72" />
+          <div className="anim-drift pointer-events-none absolute -right-32 top-24 h-96 w-96 rounded-full bg-moss/6 blur-3xl" />
+          <div className="anim-drift2 pointer-events-none absolute -left-40 bottom-10 h-96 w-96 rounded-full bg-steel/6 blur-3xl" />
           <div key={s.view} className="anim-rise relative mx-auto max-w-[1280px] px-4 py-5 md:px-6">
             {children}
           </div>

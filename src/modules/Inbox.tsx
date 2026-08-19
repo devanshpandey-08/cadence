@@ -49,6 +49,14 @@ export function Inbox() {
     <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-[320px_1fr]">
       {/* thread list */}
       <Card className="flex max-h-[calc(100vh-170px)] flex-col overflow-hidden">
+        <div className="flex items-center justify-between border-b border-line bg-paper/60 px-3 py-2">
+          <p className="flex items-center gap-1.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.16em] text-mut">
+            <span className="live-dot h-1.5 w-1.5 rounded-full bg-moss" /> Streaming
+          </p>
+          <div className="flex -space-x-1.5">
+            {(['instagram', 'linkedin', 'facebook', 'x', 'tiktok'] as const).map(p => <PlatformIcon key={p} p={p} size={15} className="rounded ring-2 ring-card" />)}
+          </div>
+        </div>
         <div className="border-b border-line p-2.5">
           <Seg size="sm" value={filter} onChange={setFilter}
             options={[

@@ -1,14 +1,92 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from '../store';
 import { authApi, DEMO_PASSWORD, ROLE_LABEL } from '../services/backend';
 import { cx, Icon, PLATFORMS, PlatformIcon } from '../meta';
 import { Avatar, inputCls } from './ui';
 
-const MOTIF_POSTS = [
+const QUEUE = [
   { p: 'linkedin' as const, t: '09:00', label: 'Wholesale spotlight' },
   { p: 'instagram' as const, t: '12:30', label: 'Spring blend reel' },
   { p: 'x' as const, t: '15:00', label: 'Roast-day thread' },
 ];
+
+/* A living product vignette — the three tools, visibly unified. */
+function LiveVignette() {
+  const [followers, setFollowers] = useState(2147);
+  const [eng, setEng] = useState(312);
+  useEffect(() => {
+    const t = window.setInterval(() => {
+      setFollowers(f => f + Math.floor(Math.random() * 3));
+      setEng(e => e + Math.floor(Math.random() * 2));
+    }, 2400);
+    return () => window.clearInterval(t);
+  }, []);
+  const pipe = [34, 26, 18, 22];
+  const pipeColors = ['#8a978d', '#4c86a8', '#c08a1e', '#c4622d'];
+  return (
+    <div className="mt-8 space-y-2.5">
+      {/* pipeline */}
+      <div className="shimmer anim-rise relative w-[352px] overflow-hidden rounded-xl border border-nightline bg-night2/80 px-4 py-3" style={{ animationDelay: '120ms' }}>
+        <div className="mb-2 flex items-center justify-between">
+          <p className="font-mono text-[9px] font-semibold uppercase tracking-[0.18em] text-nighttx">Open pipeline</p>
+          <p className="font-mono text-[11px] font-bold text-moss">$48.2K</p>
+        </div>
+        <div className="flex h-2 overflow-hidden rounded-full bg-nightline">
+          {pipe.map((v, i) => (
+            <div key={i} className="anim-grow h-full" style={{ width: `${v}%`, background: pipeColors[i], animationDelay: `${300 + i * 120}ms` }} />
+          ))}
+        </div>
+      </div>
+
+      {/* inbox — a reply being typed */}
+      <div className="anim-rise flex w-[352px] items-center gap-3 rounded-xl border border-nightline bg-night2/80 px-3.5 py-2.5" style={{ animationDelay: '260ms' }}>
+        <PlatformIcon p="instagram" size={24} />
+        <div className="min-w-0 flex-1 leading-tight">
+          <p className="truncate text-xs font-semibold text-card">@latte.lena commented</p>
+          <div className="mt-1 flex items-center gap-1.5">
+            <div className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-nightline">
+              <div className="type-bar absolute inset-y-0 left-0 rounded-full bg-moss" />
+            </div>
+            <span className="anim-blink h-3 w-[2px] bg-moss" />
+          </div>
+        </div>
+        <span className="flex items-center gap-1 rounded-full bg-steel/15 px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider text-steel">
+          drafting
+        </span>
+      </div>
+
+      {/* queued posts */}
+      {QUEUE.map((m, i) => (
+        <div key={m.p} className="anim-rise flex w-[352px] items-center gap-3 rounded-xl border border-nightline bg-night2/80 px-3.5 py-2.5" style={{ animationDelay: `${400 + i * 120}ms` }}>
+          <PlatformIcon p={m.p} size={24} />
+          <div className="min-w-0 flex-1 leading-tight">
+            <p className="truncate text-xs font-semibold text-card">{m.label}</p>
+            <p className="font-mono text-[9.5px] text-nighttx">{PLATFORMS[m.p].name} · scheduled {m.t}</p>
+          </div>
+          <span className="flex items-center gap-1 rounded-full bg-moss/15 px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider text-moss">
+            <span className="live-dot h-1 w-1 rounded-full bg-moss" /> queued
+          </span>
+        </div>
+      ))}
+
+      {/* realtime counters */}
+      <div className="anim-rise flex w-[352px] items-center justify-between rounded-xl border border-nightline bg-night2/80 px-4 py-3" style={{ animationDelay: '780ms' }}>
+        {[
+          { icon: 'users', label: 'followers', v: followers.toLocaleString() },
+          { icon: 'heart', label: 'engagement', v: eng.toLocaleString() },
+          { icon: 'bolt', label: 'auto-task', v: 'sent' },
+        ].map(c => (
+          <div key={c.label} className="text-center">
+            <p className="flex items-center justify-center gap-1.5 font-mono text-[13px] font-bold text-card">
+              <Icon name={c.icon} size={12} className="text-moss" />{c.v}
+            </p>
+            <p className="mt-0.5 font-mono text-[8px] font-semibold uppercase tracking-[0.14em] text-nighttx">{c.label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function Login() {
   const { s, a } = useApp();
@@ -51,8 +129,9 @@ export function Login() {
       {/* brand / product panel */}
       <div className="relative hidden w-[46%] flex-col justify-between overflow-hidden bg-night p-10 lg:flex">
         <div className="bg-dots pointer-events-none absolute inset-0 opacity-[0.35]" />
-        <div className="pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full bg-moss/15 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-32 -right-16 h-96 w-96 rounded-full bg-steel/10 blur-3xl" />
+        <div className="anim-drift pointer-events-none absolute -left-24 -top-24 h-96 w-96 rounded-full bg-moss/15 blur-3xl" />
+        <div className="anim-drift2 pointer-events-none absolute -bottom-32 -right-16 h-96 w-96 rounded-full bg-steel/10 blur-3xl" />
+        <div className="anim-drift pointer-events-none absolute right-1/4 top-1/3 h-64 w-64 rounded-full bg-amber/8 blur-3xl" style={{ animationDelay: '4s' }} />
 
         <div className="relative flex items-center gap-3">
           <svg width="36" height="36" viewBox="0 0 32 32">
@@ -74,25 +153,7 @@ export function Login() {
             <span className="text-moss">We built both in one tool.</span>
           </h1>
 
-          {/* living product motifs */}
-          <div className="mt-8 space-y-2.5">
-            {MOTIF_POSTS.map((m, i) => (
-              <div key={m.p} className="anim-rise flex w-[340px] items-center gap-3 rounded-xl border border-nightline bg-night2/80 px-3.5 py-2.5" style={{ animationDelay: `${150 + i * 130}ms` }}>
-                <PlatformIcon p={m.p} size={24} />
-                <div className="min-w-0 flex-1 leading-tight">
-                  <p className="truncate text-xs font-semibold text-card">{m.label}</p>
-                  <p className="font-mono text-[9.5px] text-nighttx">{PLATFORMS[m.p].name} · scheduled {m.t}</p>
-                </div>
-                <span className="flex items-center gap-1 rounded-full bg-moss/15 px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-wider text-moss">
-                  <span className="live-dot h-1 w-1 rounded-full bg-moss" /> queued
-                </span>
-              </div>
-            ))}
-            <div className="anim-rise flex w-[340px] items-center gap-2.5 rounded-xl border border-nightline bg-night2/80 px-3.5 py-2.5" style={{ animationDelay: '560ms' }}>
-              <Icon name="bolt" size={15} className="text-moss" />
-              <p className="flex-1 text-[11px] text-card/85">Deal <span className="font-semibold text-card">"Café Astra — annual"</span> → Proposal · task <span className="font-mono text-[10px] text-moss">Send contract</span> auto-created</p>
-            </div>
-          </div>
+          <LiveVignette />
         </div>
 
         <div className="relative flex flex-wrap items-center gap-x-5 gap-y-1 font-mono text-[10px] text-nighttx">

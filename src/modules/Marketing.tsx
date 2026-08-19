@@ -20,15 +20,69 @@ const PAGE_TEMPLATES: { id: PageDef['template']; label: string; desc: string }[]
 
 function Wireframe({ t, small }: { t: PageDef['template']; small?: boolean }) {
   const b = 'rounded-[3px] bg-line2';
-  const acc = 'rounded-[3px] bg-moss/60';
+  const bd = 'rounded-[3px] bg-line';
+  const acc = 'rounded-[3px] bg-moss/70';
+  const accSoft = 'rounded-[3px] bg-moss/25';
   return (
-    <div className={cx('flex w-full flex-col gap-1 rounded-lg border border-line bg-card', small ? 'aspect-[16/10] p-2' : 'aspect-[4/3] p-3')}>
-      <div className={cx(b, 'h-1.5 w-1/3')} />
-      {t === 'squeeze' && <><div className={cx(b, 'mt-1 h-2.5 w-4/5')} /><div className={cx(b, 'h-1.5 w-2/3')} /><div className={cx(acc, 'mt-auto h-3 w-1/2')} /></>}
-      {t === 'webinar' && <><div className="flex gap-1.5"><div className={cx(b, 'h-8 w-1/3')} /><div className="flex-1 space-y-1"><div className={cx(b, 'h-1.5 w-full')} /><div className={cx(b, 'h-1.5 w-2/3')} /></div></div><div className={cx(acc, 'mt-auto h-3 w-2/5')} /></>}
-      {t === 'ebook' && <><div className="flex flex-1 gap-1.5"><div className={cx(b, 'h-full w-1/4')} /><div className="flex-1 space-y-1"><div className={cx(b, 'h-2 w-3/4')} /><div className={cx(b, 'h-1.5 w-full')} /><div className={cx(b, 'h-1.5 w-5/6')} /></div></div><div className={cx(acc, 'h-3 w-1/2')} /></>}
-      {t === 'demo' && <><div className={cx(b, 'h-2 w-1/2')} /><div className="grid flex-1 grid-cols-2 gap-1"><div className={cx(b, 'h-full')} /><div className="space-y-1"><div className={cx(b, 'h-1.5 w-full')} /><div className={cx(b, 'h-1.5 w-full')} /><div className={cx(acc, 'h-2.5 w-2/3')} /></div></div></>}
-      {t === 'thankyou' && <><div className="grid flex-1 place-items-center"><div className="grid h-6 w-6 place-items-center rounded-full bg-mint text-moss"><Icon name="check" size={13} sw={3} /></div></div><div className={cx(b, 'mx-auto h-1.5 w-1/2')} /></>}
+    <div className={cx('flex w-full flex-col overflow-hidden rounded-lg border border-line bg-card', small ? 'aspect-[16/10]' : 'aspect-[4/3]')}>
+      {/* nav */}
+      <div className={cx('flex items-center justify-between border-b border-line bg-paper/70', small ? 'px-2 py-1' : 'px-3 py-1.5')}>
+        <div className={cx(b, small ? 'h-1 w-8' : 'h-1.5 w-10')} />
+        <div className="flex gap-1">{[0, 1, 2].map(i => <div key={i} className={cx(bd, small ? 'h-1 w-4' : 'h-1 w-6')} />)}</div>
+      </div>
+      {/* body */}
+      <div className={cx('flex flex-1 flex-col', small ? 'gap-1 p-2' : 'gap-1.5 p-3')}>
+        {t === 'squeeze' && <>
+          <div className={cx(bd, 'mt-1 h-3 w-4/5')} />
+          <div className={cx(b, 'h-1.5 w-3/5')} />
+          <div className={cx('mt-1 space-y-1 rounded border border-line bg-paper/60', small ? 'p-1.5' : 'p-2')}>
+            <div className={cx(b, 'h-1.5 w-full')} /><div className={cx(b, 'h-1.5 w-full')} />
+            <div className={cx(acc, small ? 'h-2.5 w-1/2' : 'h-3 w-1/2')} />
+          </div>
+          <div className="mt-auto flex gap-1.5">{[0, 1, 2].map(i => <div key={i} className={cx(bd, 'h-1.5 flex-1')} />)}</div>
+        </>}
+        {t === 'webinar' && <>
+          <div className="flex flex-1 gap-2">
+            <div className={cx(bd, 'w-2/5 self-stretch')} />
+            <div className="flex flex-1 flex-col gap-1">
+              <div className={cx(bd, 'h-2 w-4/5')} />
+              <div className={cx(b, 'h-1.5 w-full')} /><div className={cx(b, 'h-1.5 w-2/3')} />
+              <div className="mt-1 flex items-center gap-1"><div className="h-3 w-3 rounded-full bg-line2" /><div className={cx(b, 'h-1 w-1/3')} /></div>
+            </div>
+          </div>
+          <div className={cx(acc, 'h-3 w-2/5')} />
+        </>}
+        {t === 'ebook' && <>
+          <div className="flex flex-1 gap-2">
+            <div className={cx('w-1/4 self-stretch rounded bg-gradient-to-br from-moss/50 to-moss/15')} />
+            <div className="flex flex-1 flex-col gap-1">
+              <div className={cx(bd, 'h-2 w-3/4')} />
+              <div className={cx(b, 'h-1.5 w-full')} /><div className={cx(b, 'h-1.5 w-5/6')} /><div className={cx(b, 'h-1.5 w-2/3')} />
+              <div className={cx(accSoft, 'mt-1 h-2 w-1/2')} />
+            </div>
+          </div>
+          <div className={cx(acc, 'h-3 w-1/2')} />
+        </>}
+        {t === 'demo' && <>
+          <div className={cx(bd, 'h-2 w-1/2')} />
+          <div className="grid flex-1 grid-cols-2 gap-2">
+            <div className={cx('space-y-1 rounded border border-line bg-paper/60 p-1.5')}>
+              <div className={cx(b, 'h-1.5 w-full')} /><div className={cx(b, 'h-1.5 w-3/4')} /><div className={cx(b, 'h-1.5 w-full')} /><div className={cx(b, 'h-1.5 w-1/2')} />
+            </div>
+            <div className={cx(bd, 'self-stretch')} />
+          </div>
+          <div className={cx(acc, 'h-3 w-2/5')} />
+        </>}
+        {t === 'thankyou' && <>
+          <div className="grid flex-1 place-items-center">
+            <div className="flex flex-col items-center gap-1.5">
+              <div className={cx('grid place-items-center rounded-full bg-mint text-moss', small ? 'h-5 w-5' : 'h-7 w-7')}><Icon name="check" size={small ? 11 : 14} sw={3} /></div>
+              <div className={cx(bd, 'h-2 w-16')} />
+            </div>
+          </div>
+          <div className="mx-auto flex gap-1.5">{[0, 1, 2].map(i => <div key={i} className={cx(b, 'h-1.5 w-8')} />)}</div>
+        </>}
+      </div>
     </div>
   );
 }

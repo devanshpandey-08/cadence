@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../store';
 import { metricsFor } from '../data';
 import {
@@ -96,10 +96,28 @@ function LaunchChecklist() {
   );
 }
 
+/* Realtime engagement — a small ticker that breathes. */
+function LivePulse() {
+  const [n, setN] = useState(1284);
+  useEffect(() => {
+    const t = window.setInterval(() => setN(v => v + Math.floor(Math.random() * 4)), 2800);
+    return () => window.clearInterval(t);
+  }, []);
+  return (
+    <span className="flex items-center gap-1.5 rounded-full border border-line bg-card px-2.5 py-1 font-mono text-[10.5px] font-semibold text-ink2">
+      <span className="live-dot h-1.5 w-1.5 rounded-full bg-moss" />
+      {n.toLocaleString()} engagements live
+    </span>
+  );
+}
+
 export function Dashboard() {
   const { s, a } = useApp();
   const [range, setRange] = useState<'7' | '30' | '90'>('30');
   const m = metricsFor(Number(range) as 7 | 30 | 90);
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Morning' : hour < 17 ? 'Afternoon' : 'Evening';
 
   const openDeals = s.deals.filter(d => !['won', 'lost'].includes(d.stage));
   const pipeline = openDeals.reduce((x, d) => x + d.value, 0);
@@ -137,11 +155,14 @@ export function Dashboard() {
         <div>
           <p className="font-mono text-[10.5px] font-medium uppercase tracking-[0.18em] text-mut">{fmtLong(TODAY)}</p>
           <h1 className="mt-1 font-display text-[27px] font-bold leading-none tracking-tight text-ink">
-            Morning, Maya — <span className="text-moss">{todayPosts.length} posts</span> go out today.
+            {greeting}, {(s.me ?? s.users[0]).name.split(' ')[0]} — <span className="text-moss">{todayPosts.length} post{todayPosts.length === 1 ? '' : 's'}</span> go out today.
           </h1>
-          <p className="mt-1.5 text-[13px] text-mut">
-            {pending.length > 0 ? `${pending.length} post${pending.length > 1 ? 's' : ''} waiting on your approval · ` : ''}
-            {dueTasks.length} task{dueTasks.length === 1 ? '' : 's'} due · pipeline at {money(pipeline)}
+          <p className="mt-1.5 flex flex-wrap items-center gap-2 text-[13px] text-mut">
+            <span>
+              {pending.length > 0 ? `${pending.length} post${pending.length > 1 ? 's' : ''} waiting on your approval · ` : ''}
+              {dueTasks.length} task{dueTasks.length === 1 ? '' : 's'} due · pipeline at {money(pipeline)}
+            </span>
+            <LivePulse />
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -168,7 +189,7 @@ export function Dashboard() {
             <span className="text-mut">Win rate <span className="ml-1 font-mono font-bold text-ink">{winRate}%</span></span>
           </div>
         </Card>
-        <div className="col-span-12 grid grid-cols-1 gap-4 sm:grid-cols-3 lg:col-span-7">
+        <div className="stagger col-span-12 grid grid-cols-1 gap-4 sm:grid-cols-3 lg:col-span-7">
           <KpiTile label="New contacts" value={m.newContacts} series={m.newContactsSeries} color="#0e7a52" delta="+18%" foot="forms, imports & social" />
           <KpiTile label="Engagement" value={m.engagement} series={m.engagementSeries} color="#3e7cb1" delta="+24%" foot="likes, comments, shares" />
           <KpiTile label="Emails sent" value={m.emailsSent} suffix="" series={m.emailSeries} color="#a96f14" delta="+9%" foot={`${m.openRate}% avg open rate`} />
