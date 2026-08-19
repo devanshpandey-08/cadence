@@ -1,1 +1,85 @@
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Bricolage Grotesque", "Instrument Sans", ui-sans-serif, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", monospace;
+
+  --color-paper: #f1f2ec;
+  --color-card: #fbfbf8;
+  --color-ink: #18201a;
+  --color-ink2: #414b43;
+  --color-mut: #6e776f;
+  --color-faint: #9aa39b;
+  --color-line: #e3e6dc;
+  --color-line2: #cfd5c6;
+  --color-moss: #0e7a52;
+  --color-pine: #0a5c3e;
+  --color-mint: #e2efe7;
+  --color-night: #101712;
+  --color-night2: #1b241d;
+  --color-nightline: #29332b;
+  --color-nighttx: #8fa096;
+  --color-amber: #a96f14;
+  --color-amberbg: #f7ecd6;
+  --color-danger: #c2483b;
+  --color-dangerbg: #f8e6e2;
+  --color-steel: #3e7cb1;
+  --color-steelbg: #e5eef6;
+
+  --shadow-lift: 0 10px 30px -14px rgb(20 28 22 / 0.25);
+  --shadow-pop: 0 24px 60px -24px rgb(16 23 18 / 0.35);
+}
+
+html, body, #root { height: 100%; }
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: rgb(14 122 82 / 0.22); }
+
+* { scrollbar-width: thin; scrollbar-color: #c3cab8 transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: #c3cab8; border-radius: 8px; }
+*::-webkit-scrollbar-track { background: transparent; }
+
+.bg-dots {
+  background-image: radial-gradient(rgb(24 32 26 / 0.055) 1px, transparent 1.4px);
+  background-size: 22px 22px;
+}
+.glow-top {
+  background:
+    radial-gradient(700px 320px at 12% -8%, rgb(14 122 82 / 0.09), transparent 70%),
+    radial-gradient(560px 300px at 95% -12%, rgb(62 124 177 / 0.07), transparent 70%);
+}
+
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes pop { from { opacity: 0; transform: scale(0.965) translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes slidein { from { opacity: 0; transform: translateX(36px); } to { opacity: 1; transform: none; } }
+@keyframes fadein { from { opacity: 0; } to { opacity: 1; } }
+@keyframes toastin { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes draw { from { stroke-dashoffset: 260; } to { stroke-dashoffset: 0; } }
+@keyframes growx { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes pulsedot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+@keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+
+.anim-rise { animation: rise 0.42s cubic-bezier(0.21, 0.86, 0.36, 1) both; }
+.anim-pop { animation: pop 0.28s cubic-bezier(0.21, 0.86, 0.36, 1) both; }
+.anim-slide { animation: slidein 0.34s cubic-bezier(0.21, 0.86, 0.36, 1) both; }
+.anim-fade { animation: fadein 0.22s ease both; }
+.anim-toast { animation: toastin 0.3s cubic-bezier(0.21, 0.86, 0.36, 1) both; }
+.anim-grow { transform-origin: left; animation: growx 0.7s cubic-bezier(0.21, 0.86, 0.36, 1) both; }
+.anim-shake { animation: shake 0.24s ease-in-out 2; }
+.spark .draw { stroke-dasharray: 260; animation: draw 1.15s cubic-bezier(0.4, 0, 0.2, 1) both; }
+.live-dot { animation: pulsedot 1.7s ease-in-out infinite; }
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+.drag-ghost { opacity: 0.4; }
