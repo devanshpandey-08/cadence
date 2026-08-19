@@ -363,12 +363,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const ref = useRef(s);
   ref.current = s;
 
+  /* persistence — debounced so ambient ticks and rapid input batch into one write */
   useEffect(() => {
-    try {
-      const { toasts: _t, me: _m, ...rest } = s;
-      localStorage.setItem(KEY, JSON.stringify({ version: 2, "data": rest }));
-    } catch { /* storage full or unavailable */ }
+    const t = window.setTimeout(() => {
+      try {
+        const { toasts: _t, me: _m, ...rest } = s;
+        localStorage.setItem(KEY, JSON.stringify({ version: 2, "data": rest }));
+      } catch { /* storage full or unavailable */ }
+    }, 350);
+    return () => window.clearTimeout(t);
   }, [s]);
+
+  /* flush on close so the last action is never lost */
+  useEffect(() => {
+    const flush = () => {
+      try {
+        const { toasts: _t, me: _m, ...rest } = ref.current;
+        localStorage.setItem(KEY, JSON.stringify({ version: 2, "data": rest }));
+      } catch { /* noop */ }
+    };
+    const onVis = () => { if (document.visibilityState === 'hidden') flush(); };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', onVis);
+    return () => { window.removeEventListener('pagehide', flush); document.removeEventListener('visibilitychange', onVis); };
+  }, []);
 
   /* ---------- ambient life ----------
      The workspace keeps breathing while you watch. In production these events
@@ -385,6 +403,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       'When does the summer cold brew drop?',
     ];
     const t = window.setInterval(() => {
+      if (document.visibilityState === 'hidden') return; // hidden tab — save the cycles
       const st = ref.current;
       if (!st.me) return; // signed out — no noise on the login screen
       const push = (text: string, kind: 'auto' | 'system' = 'system') =>
