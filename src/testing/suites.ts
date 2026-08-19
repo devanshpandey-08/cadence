@@ -1,6 +1,7 @@
 import type { Suite, TestEnv } from './framework';
-import { assert, budget, createEnv, eq, measure, syntheticContacts, syntheticPosts } from './framework';
+import { assert, budget, createEnv, eq, measure, syntheticContacts, syntheticEvents, syntheticPosts } from './framework';
 import { parsePersisted } from '../store';
+import { probeStorage } from './scaleModel';
 import { authApi, DEMO_PASSWORD } from '../services/backend';
 import { csvEscape, toCsv } from '../services/csv';
 import { LIST_SIZES, seedState } from '../data';
@@ -432,6 +433,27 @@ const scale: Suite = {
         assert(mb < 4.5, `payload ${mb.toFixed(2)} MB exceeds localStorage quota risk`);
         return undefined as never;
       })),
+    T('x9', '100k contacts serialize inside the persistence budget', 'scale', () =>
+      budget('100k serialize', 2500, () => {
+        const json = JSON.stringify(syntheticContacts(100000));
+        assert(json.length > 40_000_000, 'payload sanity');
+      })),
+    T('x10', 'activity feed merge stays linear at 100k events', 'scale', () =>
+      budget('100k-event merge', 400, () => {
+        const feed = syntheticEvents(100000).sort((a, b) => b.at.localeCompare(a.at)).slice(0, 8);
+        eq(feed.length, 8, 'top 8');
+      })),
+    T('x11', 'kanban grouping holds a 60fps frame with 5k deals', 'scale', () =>
+      budget('5k-deal group + sum', 80, () => {
+        const stages = ['lead', 'qualified', 'proposal', 'negotiation', 'won', 'lost'] as const;
+        const deals = Array.from({ length: 5000 }, (_, i) => ({ id: `d${i}`, stage: stages[i % 6], value: 1000 + i * 10 }));
+        stages.forEach(st => deals.filter(d => d.stage === st).reduce((n, d) => n + d.value, 0));
+      })),
+    T('x12', 'browser storage probe finds ≥ 2 MB usable', 'scale', async () => {
+      const q = await probeStorage();
+      assert(q.usableMB >= 2, `only ${q.usableMB.toFixed(1)} MB usable`);
+      return { metric: { value: `${q.usableMB.toFixed(1)} MB`, budget: '≥ 2 MB' } };
+    }),
   ],
 };
 

@@ -108,6 +108,14 @@ export function syntheticContacts(n: number) {
   }));
 }
 
+export function syntheticEvents(n: number) {
+  const today = isoOf(new Date());
+  return Array.from({ length: n }, (_, i) => ({
+    id: `ev-${i}`, type: 'social' as const, who: `Contact ${i % 997}`,
+    text: `Replied to commenter ${i} on instagram`, at: today,
+  }));
+}
+
 export function syntheticPosts(n: number) {
   return Array.from({ length: n }, (_, i) => ({
     id: `sp-${i}`,

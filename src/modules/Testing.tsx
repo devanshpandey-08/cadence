@@ -1,14 +1,16 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../store';
 import { cx, Icon } from '../meta';
 import { SUITES, TOTAL_TESTS, REQ_LABEL, runOne, probeRbac } from '../testing/suites';
 import type { Suite, TestResult } from '../testing/framework';
 import { measure, syntheticContacts, syntheticPosts } from '../testing/framework';
+import { BYTES, DATASETS, PHASE1_GB, fmtBytes, fmtRecords, project, probeStorage, rulerPos } from '../testing/scaleModel';
+import type { QuotaProbe, Tier } from '../testing/scaleModel';
 import { reducer } from '../store';
 import { seedState } from '../data';
 import { Btn, Card, IconBtn, Pill, SectionTitle, Seg } from '../components/ui';
 
-type Tab = 'suites' | 'load' | 'security' | 'coverage';
+type Tab = 'suites' | 'load' | 'limits' | 'security' | 'coverage';
 
 const tick = () => new Promise<void>(r => window.setTimeout(r, 24));
 
