@@ -1,6 +1,6 @@
 export type View =
   | 'dashboard' | 'inbox' | 'tasks' | 'contacts' | 'deals'
-  | 'calendar' | 'campaigns' | 'marketing' | 'settings';
+  | 'calendar' | 'campaigns' | 'marketing' | 'testing' | 'settings';
 
 export type Platform =
   | 'linkedin' | 'instagram' | 'facebook' | 'x'

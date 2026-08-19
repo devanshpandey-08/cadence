@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp, useCanEdit } from '../store';
+import { toCsv } from '../services/csv';
 import { TAG_OPTIONS } from '../data';
 import { addDays, cx, Icon, isoOf, money, relTime, uid } from '../meta';
 import type { Contact, Source } from '../types';
@@ -298,10 +299,11 @@ export function Contacts() {
   }), [s.contacts, q, src, tag]);
 
   const exportCsv = () => {
-    const head = 'name,email,phone,company,title,source,tags,owner,created';
-    const body = rows.map(c => [c.name, c.email, c.phone ?? '', c.company, c.title, c.source, c.tags.join('|'), c.owner, c.createdAt]
-      .map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const url = URL.createObjectURL(new Blob([head + '\n' + body], { type: 'text/csv' }));
+    const csv = toCsv(
+      ['name', 'email', 'phone', 'company', 'title', 'source', 'tags', 'owner', 'created'],
+      rows.map(c => [c.name, c.email, c.phone ?? '', c.company, c.title, c.source, c.tags.join('|'), c.owner, c.createdAt]),
+    );
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
     const el = document.createElement('a');
     el.href = url; el.download = 'cadence-contacts.csv'; el.click();
     URL.revokeObjectURL(url);

@@ -109,6 +109,9 @@ const P: Record<string, ReactNode> = {
   dot: <circle cx="12" cy="12" r="4" fill="currentColor" stroke="none" />,
   image: <><rect x="3.5" y="3.5" width="17" height="17" rx="2.2" /><circle cx="9" cy="9" r="1.8" /><path d="m20.5 15.5-4.5-4.5-9 9" /></>,
   play: <path d="M7 4.5 19 12 7 19.5z" />,
+  shield: <><path d="M12 22s8-3.6 8-9.8V5.2L12 2 4 5.2v7C4 18.4 12 22 12 22z" /><path d="m8.8 11.8 2.3 2.3 4.3-4.8" /></>,
+  gauge: <><path d="M4 14.5a8 8 0 1 1 16 0" /><path d="M12 14.5 15.5 9" /><path d="M3.5 18.5h17" /></>,
+  terminal: <><rect x="2.5" y="4" width="19" height="16" rx="2.2" /><path d="m6.5 9 3 3-3 3" /><path d="M12 15.5h5.5" /></>,
 };
 
 export function Icon({ name, size = 17, className, sw = 1.8 }: { name: keyof typeof P | string; size?: number; className?: string; sw?: number }) {

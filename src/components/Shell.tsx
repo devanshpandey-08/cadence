@@ -16,6 +16,7 @@ const TITLES: Record<View, { t: string; s: string }> = {
   calendar: { t: 'Content Calendar', s: 'Plan, approve and publish everywhere' },
   campaigns: { t: 'Email Campaigns', s: 'Broadcasts delivered through your own SMTP' },
   marketing: { t: 'Forms & Pages', s: 'Capture leads and convert on landing pages' },
+  testing: { t: 'QA Console', s: 'Automated suites, load benchmarks and live security probes' },
   settings: { t: 'Settings', s: 'Team, channels, plan and integrations' },
 };
 
@@ -68,7 +69,10 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
     },
     {
       label: 'Workspace',
-      items: [{ v: 'settings', icon: 'sliders', label: 'Settings' }],
+      items: [
+        { v: 'testing', icon: 'shield', label: 'QA Console' },
+        { v: 'settings', icon: 'sliders', label: 'Settings' },
+      ],
     },
   ];
 

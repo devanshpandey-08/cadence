@@ -9,6 +9,7 @@ import { Inbox } from './modules/Inbox';
 import { Campaigns } from './modules/Campaigns';
 import { Marketing } from './modules/Marketing';
 import { Tasks } from './modules/Tasks';
+import { Testing } from './modules/Testing';
 import { Settings } from './modules/Settings';
 import { Composer } from './modules/Composer';
 
@@ -22,6 +23,7 @@ function Router() {
     case 'calendar': return <CalendarView />;
     case 'campaigns': return <Campaigns />;
     case 'marketing': return <Marketing />;
+    case 'testing': return <Testing />;
     case 'settings': return <Settings />;
     default: return <Dashboard />;
   }
