@@ -10,8 +10,8 @@
   --color-card: #ffffff;
   --color-ink: #1b1b17;
   --color-ink2: #4c4c44;
-  --color-mut: #8a8a80;
-  --color-faint: #b5b5aa;
+  --color-mut: #66665d;   /* 5.2:1 on paper — clears WCAG AA 4.5:1 */
+  --color-faint: #a8a89c;
   --color-line: #e7e7de;
   --color-line2: #d6d6ca;
 

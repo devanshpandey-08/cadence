@@ -410,8 +410,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           });
           if (likes > 45) push(`A post is gaining traction — ${likes} likes on ${PLATFORMS[p.platforms[0]].name}`, 'auto');
         }
-      } else {
+      } else if (st.contacts.length < 25) {
         // a form converts — a new contact lands in the CRM
+        // (capped at the Growth-plan demo quota so the meter never overflows)
         const form = st.forms[0];
         const name = NAMES[Math.floor(Math.random() * NAMES.length)];
         const co = COMPANIES[Math.floor(Math.random() * COMPANIES.length)];
