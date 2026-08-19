@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useApp } from '../store';
+import { useApp, useCanEdit } from '../store';
 import { cx, fmtDate, Icon, isoOf, relTime, TODAY } from '../meta';
 import type { Task } from '../types';
 import { Avatar, Btn, Card, EmptyState, IconBtn, inputCls, SectionTitle, Toggle } from '../components/ui';
@@ -50,6 +50,7 @@ function TaskRow({ t }: { t: Task }) {
 
 export function Tasks() {
   const { s, a } = useApp();
+  const can = useCanEdit();
   const [title, setTitle] = useState('');
   const [due, setDue] = useState(TODAY);
   const [prio, setPrio] = useState<Task['priority']>('med');
@@ -100,7 +101,7 @@ export function Tasks() {
             <select value={assignee} onChange={e => setAssignee(e.target.value)} className={cx(inputCls, 'w-auto')}>
               {s.users.filter(u => u.role !== 'viewer').map(u => <option key={u.id}>{u.name}</option>)}
             </select>
-            <Btn onClick={add}><Icon name="plus" size={14} sw={2.4} /> Add</Btn>
+            <Btn onClick={add} disabled={!can} title={can ? 'Add task' : 'Read-only role'}><Icon name="plus" size={14} sw={2.4} /> Add</Btn>
           </div>
           <div className="mt-2 flex items-center gap-2">
             <span className="font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-mut">Link to deal</span>

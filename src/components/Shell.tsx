@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import { useApp } from '../store';
-import { Avatar, IconBtn, Modal, ToastHost } from './ui';
+import { useApp, useCanEdit } from '../store';
+import { Avatar, IconBtn, Modal, Pill, ToastHost } from './ui';
 import { cx, Icon, kfmt, relTime, TODAY } from '../meta';
 import type { View } from '../types';
 import { CommandPalette, GMAP } from './CommandPalette';
+import { ROLE_LABEL, ROLE_SCOPE } from '../services/backend';
 
 const TITLES: Record<View, { t: string; s: string }> = {
   dashboard: { t: 'Dashboard', s: 'CRM, social and email — one pulse' },
@@ -141,10 +142,10 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
         </div>
 
         <button onClick={() => { a.nav('settings'); onClose(); }} className="mx-3 mb-4 flex items-center gap-2.5 rounded-lg px-2 py-2 text-left transition hover:bg-night2/70">
-          <Avatar name="Maya Chen" color="#0e7a52" size={30} />
+          <Avatar name={(s.me ?? s.users[0]).name} color={(s.me ?? s.users[0]).color} size={30} />
           <div className="min-w-0 leading-tight">
-            <p className="truncate text-xs font-semibold text-card">Maya Chen</p>
-            <p className="text-[10px] text-nighttx">Admin · maya@emberandoak.com</p>
+            <p className="truncate text-xs font-semibold text-card">{(s.me ?? s.users[0]).name}</p>
+            <p className="truncate text-[10px] text-nighttx">{ROLE_LABEL[(s.me ?? s.users[0]).role]} · {(s.me ?? s.users[0]).email}</p>
           </div>
         </button>
       </aside>
@@ -217,6 +218,7 @@ function SearchBox() {
 
 function CreateMenu() {
   const { s, a } = useApp();
+  const can = useCanEdit();
   const [open, setOpen] = useState(false);
   const items: { label: string; icon: string; fn: () => void }[] = [
     { label: 'New post', icon: 'send', fn: () => a.openComposer() },
@@ -227,8 +229,9 @@ function CreateMenu() {
   ];
   return (
     <div className="relative">
-      <button onClick={() => setOpen(o => !o)}
-        className={cx('flex h-9 items-center gap-1.5 rounded-lg bg-moss px-3.5 text-[13px] font-semibold text-card shadow-sm transition-all hover:bg-pine active:scale-[0.97]', open && 'bg-pine')}>
+      <button onClick={() => (can ? setOpen(o => !o) : a.toast('Viewer role is read-only — ask an Admin for Editor access', 'warning'))}
+        title={can ? 'Create something new' : 'Read-only role'}
+        className={cx('flex h-9 items-center gap-1.5 rounded-lg bg-moss px-3.5 text-[13px] font-semibold text-card shadow-sm transition-all hover:bg-pine active:scale-[0.97]', open && 'bg-pine', !can && 'cursor-not-allowed opacity-55')}>
         <Icon name="plus" size={15} sw={2.4} /> Create
       </button>
       {open && (
@@ -306,8 +309,55 @@ function SyncTicker() {
   );
 }
 
+function UserMenu() {
+  const { s, a } = useApp();
+  const [open, setOpen] = useState(false);
+  const me = s.me ?? s.users[0];
+  const roleColor = { admin: '#0e7a52', editor: '#3e7cb1', viewer: '#a96f14' }[me.role];
+  const roleTint = { admin: '#e2efe7', editor: '#e5eef6', viewer: '#f7ecd6' }[me.role];
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen(o => !o)}
+        className={cx('flex items-center gap-1.5 rounded-lg border border-transparent p-1 pr-1.5 transition hover:border-line hover:bg-card', open && 'border-line bg-card')}>
+        <Avatar name={me.name} color={me.color} size={30} />
+        <Icon name="chevd" size={12} className={cx('text-faint transition-transform', open && 'rotate-180')} />
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-12 z-40 w-[264px] anim-pop overflow-hidden rounded-xl border border-line bg-card shadow-pop">
+            <div className="border-b border-line bg-paper/60 px-4 py-3.5">
+              <div className="flex items-center gap-2.5">
+                <Avatar name={me.name} color={me.color} size={36} />
+                <div className="min-w-0 leading-tight">
+                  <p className="truncate text-[13px] font-bold text-ink">{me.name}</p>
+                  <p className="truncate text-[10.5px] text-mut">{me.email}</p>
+                </div>
+              </div>
+              <p className="mt-2.5 flex items-center gap-1.5">
+                <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ color: roleColor, background: roleTint }}>{ROLE_LABEL[me.role]}</span>
+                <span className="text-[10px] text-mut">{ROLE_SCOPE[me.role]}</span>
+              </p>
+            </div>
+            <div className="p-1.5">
+              <div className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[12px] font-medium text-mut">
+                <Icon name="dash" size={14} /> Press <span className="rounded border border-line bg-paper px-1 font-mono text-[10px] font-bold text-ink2">?</span> for keyboard shortcuts
+              </div>
+              <button onClick={() => { setOpen(false); a.logout(); }}
+                className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-semibold text-danger transition hover:bg-dangerbg">
+                <Icon name="external" size={14} /> Sign out
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
 function Topbar({ onMenu }: { onMenu: () => void }) {
   const { s } = useApp();
+  const can = useCanEdit();
   const t = TITLES[s.view];
   return (
     <header className="sticky top-0 z-20 flex h-[58px] shrink-0 items-center gap-3 border-b border-line bg-paper/85 px-4 backdrop-blur-md md:px-6">
@@ -318,10 +368,11 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
       </div>
       <SyncTicker />
       <SearchBox />
+      {!can && <Pill color="#a96f14" tint="#f7ecd6" className="hidden md:inline-flex"><Icon name="eye" size={11} /> Read-only</Pill>}
       <CreateMenu />
       <Bell />
-      <div className="hidden items-center gap-2 border-l border-line pl-3 sm:flex">
-        <Avatar name="Maya Chen" color="#0e7a52" size={30} />
+      <div className="flex items-center gap-2 border-l border-line pl-3">
+        <UserMenu />
       </div>
     </header>
   );

@@ -4,10 +4,11 @@ import type {
   AppState, Campaign, Contact, Deal, FormDef, Notif, PageDef, Post, Stage, Task, Thread, ToastMsg, User, View,
 } from './types';
 import confetti from 'canvas-confetti';
+import { authApi } from './services/backend';
 import { LIST_SIZES, seedState } from './data';
 import { addDays, isoOf, stageMeta, uid } from './meta';
 
-const KEY = 'cadence-demo-v1';
+const KEY = 'cadence-v2';
 
 type Action =
   | { t: 'ui'; p: Partial<AppState> }
@@ -70,16 +71,18 @@ function reducer(s: AppState, a: Action): AppState {
 }
 
 function load(): AppState {
+  let base = seedState();
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && parsed.version === 1 && parsed.data && Array.isArray(parsed.data.contacts)) {
-        return { ...parsed.data, toasts: [], composer: { open: false }, create: null };
+      if (parsed && parsed.version === 2 && parsed.data && Array.isArray(parsed.data.contacts)) {
+        base = { ...parsed.data } as AppState;
       }
     }
   } catch { /* fall through to seed */ }
-  return seedState();
+  // Session restore flows through the auth service (GET /api/v1/me in production).
+  return { ...base, me: authApi.restore(base.users), toasts: [], composer: { open: false }, create: null };
 }
 
 export interface Api {
@@ -116,7 +119,15 @@ export interface Api {
   patchAccount: (id: string, p: { connected: boolean }) => void;
   importContacts: (list: Contact[]) => void;
   reset: () => void;
+  login: (userId: string, remember: boolean) => void;
+  logout: () => void;
 }
+
+/** Role gate — Viewers get read-only access everywhere. */
+export const useCanEdit = () => {
+  const { s } = useApp();
+  return s.me ? s.me.role !== 'viewer' : true;
+};
 
 const Ctx = createContext<{ s: AppState; a: Api } | null>(null);
 
@@ -133,8 +144,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      const { toasts: _t, ...rest } = s;
-      localStorage.setItem(KEY, JSON.stringify({ version: 1, data: rest }));
+      const { toasts: _t, me: _m, ...rest } = s;
+      localStorage.setItem(KEY, JSON.stringify({ version: 2, data: rest }));
     } catch { /* storage full or unavailable */ }
   }, [s]);
 
@@ -146,6 +157,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
     const notify = (text: string, kind: Notif['kind'] = 'system') =>
       dispatch({ t: 'notif+', n: { id: uid(), text, at: isoOf(new Date()), read: false, kind } });
+    /* ---- permission gates (mirrors server-side RBAC middleware) ---- */
+    const requireEdit = () => {
+      const me = ref.current.me;
+      if (me && me.role === 'viewer') { toast('Viewer role is read-only — ask an Admin for Editor access', 'warning'); return false; }
+      return true;
+    };
+    const requireAdmin = () => {
+      const me = ref.current.me;
+      if (me && me.role !== 'admin') { toast('Only Admins can manage users & billing', 'warning'); return false; }
+      return true;
+    };
+
     const celebrate = (big = false) => {
       try {
         const colors = ['#0e7a52', '#3e7cb1', '#c08a1e', '#2f8f83', '#f1f2ec'];
@@ -159,11 +182,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
       ui: p => dispatch({ t: 'ui', p }),
       openContact: id => dispatch({ t: 'ui', p: { view: 'contacts', contactId: id, dealId: null } }),
       openDeal: id => dispatch({ t: 'ui', p: { view: 'deals', dealId: id, contactId: null } }),
-      openComposer: p => dispatch({ t: 'ui', p: { composer: { open: true, ...p } } }),
+      openComposer: p => {
+        const me = ref.current.me;
+        if (me && me.role === 'viewer') {
+          toast('Viewer role is read-only — ask an Admin for Editor access', 'warning');
+          return;
+        }
+        dispatch({ t: 'ui', p: { composer: { open: true, ...p } } });
+      },
       closeComposer: () => dispatch({ t: 'ui', p: { composer: { open: false } } }),
       toast, notify,
 
       addContact: c => {
+        if (!requireEdit()) return '';
         const id = uid();
         const today = isoOf(new Date());
         dispatch({
@@ -173,8 +204,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         toast(`${c.name} added to contacts`);
         return id;
       },
-      patchContact: (id, p) => dispatch({ t: 'contact~', id, p }),
+      patchContact: (id, p) => { if (requireEdit()) dispatch({ t: 'contact~', id, p }); },
       logActivity: (contactId, type, text) => {
+        if (!requireEdit()) return;
         const today = isoOf(new Date());
         const c = ref.current.contacts.find(x => x.id === contactId);
         if (!c) return;
@@ -182,11 +214,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       },
 
       addDeal: dl => {
+        if (!requireEdit()) return;
         dispatch({ t: 'deal+', dl: { ...dl, id: uid(), created: isoOf(new Date()), notes: [] } });
         toast(`Deal "${dl.name}" created in ${stageMeta(dl.stage).label}`);
       },
-      patchDeal: (id, p) => dispatch({ t: 'deal~', id, p }),
+      patchDeal: (id, p) => { if (requireEdit()) dispatch({ t: 'deal~', id, p }); },
       moveDeal: (id, stage) => {
+        if (!requireEdit()) return;
         const dl = ref.current.deals.find(x => x.id === id);
         if (!dl || dl.stage === stage) return;
         dispatch({ t: 'deal~', id, p: { stage } });
@@ -214,29 +248,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       },
 
-      addTask: t => { dispatch({ t: 'task+', task: { ...t, id: uid(), done: false } }); toast('Task added'); },
+      addTask: t => { if (!requireEdit()) return; dispatch({ t: 'task+', task: { ...t, id: uid(), done: false } }); toast('Task added'); },
       toggleTask: id => {
+        if (!requireEdit()) return;
         const t = ref.current.tasks.find(x => x.id === id);
         if (!t) return;
         dispatch({ t: 'task~', id, p: { done: !t.done } });
         if (!t.done) toast(`Completed — ${t.title}`, 'info');
       },
-      removeTask: id => dispatch({ t: 'task-', id }),
+      removeTask: id => { if (requireEdit()) dispatch({ t: 'task-', id }); },
 
       addPost: p => {
+        if (!requireEdit()) return '';
         const id = uid();
         dispatch({ t: 'post+', post: { ...p, id } });
         return id;
       },
-      patchPost: (id, p) => dispatch({ t: 'post~', id, p }),
+      patchPost: (id, p) => { if (requireEdit()) dispatch({ t: 'post~', id, p }); },
       movePost: (id, date) => {
+        if (!requireEdit()) return;
         dispatch({ t: 'post~', id, p: { date } });
         toast('Post rescheduled', 'info');
       },
-      removePost: id => { dispatch({ t: 'post-', id }); toast('Post deleted', 'warning'); },
+      removePost: id => { if (requireEdit()) { dispatch({ t: 'post-', id }); toast('Post deleted', 'warning'); } },
 
-      patchThread: (id, p) => dispatch({ t: 'thread~', id, p }),
+      patchThread: (id, p) => { if (requireEdit()) dispatch({ t: 'thread~', id, p }); },
       replyThread: (id, text) => {
+        if (!requireEdit()) return;
         const th = ref.current.threads.find(x => x.id === id);
         if (!th) return;
         dispatch({
@@ -270,8 +308,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       },
 
-      addCampaign: c => { dispatch({ t: 'campaign+', c: { ...c, id: uid(), sent: 0, opens: 0, clicks: 0 } }); toast(c.status === 'scheduled' ? 'Campaign scheduled' : 'Draft saved'); },
+      addCampaign: c => { if (!requireEdit()) return; dispatch({ t: 'campaign+', c: { ...c, id: uid(), sent: 0, opens: 0, clicks: 0 } }); toast(c.status === 'scheduled' ? 'Campaign scheduled' : 'Draft saved'); },
       sendCampaign: id => {
+        if (!requireEdit()) return;
         const c = ref.current.campaigns.find(x => x.id === id);
         if (!c) return;
         const sent = LIST_SIZES[c.list] ?? 500;
@@ -283,18 +322,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
         notify(`Campaign "${c.name}" delivered — ${opens.toLocaleString()} opens so far`, 'system');
       },
 
-      addForm: f => { dispatch({ t: 'form+', f: { ...f, id: uid(), submissions: 0, conv: 0, active: true } }); toast(`Form "${f.name}" created`); },
-      patchForm: (id, p) => dispatch({ t: 'form~', id, p }),
-      addPage: pg => { dispatch({ t: 'page+', pg: { ...pg, id: uid(), views: 0, submissions: 0, status: 'live' } }); toast(`Landing page published at ${pg.slug}.emberandoak.cadence.site`, 'info'); },
+      addForm: f => { if (!requireEdit()) return; dispatch({ t: 'form+', f: { ...f, id: uid(), submissions: 0, conv: 0, active: true } }); toast(`Form "${f.name}" created`); },
+      patchForm: (id, p) => { if (requireEdit()) dispatch({ t: 'form~', id, p }); },
+      addPage: pg => { if (!requireEdit()) return; dispatch({ t: 'page+', pg: { ...pg, id: uid(), views: 0, submissions: 0, status: 'live' } }); toast(`Landing page published at ${pg.slug}.emberandoak.cadence.site`, 'info'); },
 
-      patchUser: (id, p) => dispatch({ t: 'user~', id, p }),
+      patchUser: (id, p) => { if (requireAdmin()) dispatch({ t: 'user~', id, p }); },
       addUser: (name, email, role) => {
+        if (!requireAdmin()) return;
         dispatch({ t: 'user+', u: { id: uid(), name, email, role, color: '#2f8f83' } });
         toast(`Invite sent to ${email}`);
       },
-      patchAccount: (id, p) => dispatch({ t: 'account~', id, p }),
+      patchAccount: (id, p) => { if (requireEdit()) dispatch({ t: 'account~', id, p }); },
 
       importContacts: list => {
+        if (!requireEdit()) return;
         dispatch({ t: 'import', contacts: list });
         notify(`HubSpot import finished — ${list.length} contacts added`, 'import');
         toast(`Import complete — ${list.length} contacts added`);
@@ -304,6 +345,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
         try { localStorage.removeItem(KEY); } catch { /* noop */ }
         dispatch({ t: 'reset' });
         toast('Demo data reset', 'info');
+      },
+
+      login: (userId, remember) => {
+        const u = ref.current.users.find(x => x.id === userId);
+        if (!u) return;
+        dispatch({ t: 'ui', p: { me: u } });
+        notify(`Signed in as ${u.name} · ${u.role === 'viewer' ? 'read-only session' : 'workspace ready'}`, 'system');
+        void remember; // authApi already persisted the session token
+      },
+      logout: () => {
+        authApi.logout();
+        dispatch({ t: 'ui', p: { me: null, view: 'dashboard', contactId: null, dealId: null } });
       },
     };
   }, []);

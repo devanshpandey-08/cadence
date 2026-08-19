@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useApp } from '../store';
+import { useApp, useCanEdit } from '../store';
 import {
   cx, Icon, isoOf, monthMatrix, monthTitle, PLATFORM_IDS, PLATFORMS, PlatformIcon, STATUSES, STATUS_ICON, TODAY, weekOf, WEEKDAYS,
 } from '../meta';
@@ -7,11 +7,12 @@ import type { Platform, Post, PostStatus } from '../types';
 import { Btn, Card, IconBtn, Modal, Pill, Seg } from '../components/ui';
 
 function PostChip({ p, onClick, wide }: { p: Post; onClick: () => void; wide?: boolean }) {
+  const can = useCanEdit();
   const main = PLATFORMS[p.platforms[0]];
   const st = STATUSES[p.status];
   return (
     <button
-      draggable
+      draggable={can}
       onDragStart={e => { e.dataTransfer.setData('text/post', p.id); e.dataTransfer.effectAllowed = 'move'; }}
       onClick={e => { e.stopPropagation(); onClick(); }}
       title={`${st.label} · ${p.platforms.map(x => PLATFORMS[x].name).join(', ')}`}

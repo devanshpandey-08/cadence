@@ -142,6 +142,7 @@ export type CreateSignal = 'contact' | 'deal' | 'campaign' | 'task' | null;
 
 export interface AppState {
   view: View;
+  me: User | null;
   contactId: string | null;
   dealId: string | null;
   composer: ComposerState;

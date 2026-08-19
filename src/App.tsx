@@ -1,5 +1,6 @@
 import { AppProvider, useApp } from './store';
 import { Shell } from './components/Shell';
+import { Login } from './components/Login';
 import { Dashboard } from './modules/Dashboard';
 import { Contacts } from './modules/Contacts';
 import { Deals } from './modules/Deals';
@@ -26,13 +27,23 @@ function Router() {
   }
 }
 
-export default function App() {
+function Gate() {
+  const { s } = useApp();
+  if (!s.me) return <Login />;
   return (
-    <AppProvider>
+    <>
       <Shell>
         <Router />
       </Shell>
       <Composer />
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <AppProvider>
+      <Gate />
     </AppProvider>
   );
 }

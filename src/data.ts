@@ -117,6 +117,7 @@ export function seedState(): AppState {
 
   return {
     view: 'dashboard',
+    me: null,
     contactId: null,
     dealId: null,
     composer: { open: false },

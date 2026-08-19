@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useApp } from '../store';
 import { metricsFor } from '../data';
 import {
-  cx, fmtDate, fmtLong, Icon, kfmt, money, PLATFORMS, PlatformIcon, relTime, STATUSES, STATUS_ICON, TODAY,
+  addDays, cx, fmtDate, fmtLong, Icon, kfmt, money, PLATFORMS, PlatformIcon, relTime, STATUSES, STATUS_ICON, TODAY,
 } from '../meta';
 import type { Platform, Source } from '../types';
 import { Avatar, Btn, Card, CountUp, EmptyState, Pill, SectionTitle, Seg, Spark, StageBar } from '../components/ui';

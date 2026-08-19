@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useApp } from '../store';
+import { useApp, useCanEdit } from '../store';
 import { TAG_OPTIONS } from '../data';
 import { addDays, cx, Icon, isoOf, money, relTime, uid } from '../meta';
 import type { Contact, Source } from '../types';
@@ -276,6 +276,7 @@ export function Contacts() {
   const [src, setSrc] = useState<'all' | Source>('all');
   const [tag, setTag] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const can = useCanEdit();
   const [importOpen, setImportOpen] = useState(false);
 
   useEffect(() => {
@@ -331,8 +332,8 @@ export function Contacts() {
         </div>
         <div className="ml-auto flex items-center gap-2">
           <Btn variant="outline" size="md" onClick={exportCsv}><Icon name="download" size={14} /> Export</Btn>
-          <Btn variant="outline" onClick={() => setImportOpen(true)}><Icon name="upload" size={14} /> Import</Btn>
-          <Btn onClick={() => setAddOpen(true)}><Icon name="plus" size={14} sw={2.4} /> Add contact</Btn>
+          <Btn variant="outline" disabled={!can} onClick={() => setImportOpen(true)}><Icon name="upload" size={14} /> Import</Btn>
+          <Btn disabled={!can} onClick={() => setAddOpen(true)}><Icon name="plus" size={14} sw={2.4} /> Add contact</Btn>
         </div>
       </div>
 
