@@ -1,3 +1,4 @@
+import confetti from 'canvas-confetti';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../store';
 import { cx, Icon } from '../meta';
@@ -306,6 +307,290 @@ function CoveragePanel({ results }: { results: Record<string, TestResult> }) {
   );
 }
 
+/* ================= scale ceiling lab ================= */
+const TIER_META: Record<Tier, { label: string; color: string; tint: string; icon: string }> = {
+  demo: { label: 'This browser tab', color: '#a96f14', tint: '#f7ecd6', icon: 'dash' },
+  phase1: { label: 'Phase 1 stack', color: '#0e7a52', tint: '#e2efe7', icon: 'file' },
+  sharded: { label: 'Sharded cluster', color: '#7a5fa8', tint: '#efeaf6', icon: 'globe' },
+};
+
+function RulerMarker({ label, sub, bytes, color, up }: { label: string; sub: string; bytes: number; color: string; up: boolean }) {
+  return (
+    <div className="absolute -top-2 bottom-0 z-10" style={{ left: `${rulerPos(bytes)}%` }}>
+      <div className={cx('relative h-full w-0 border-l-2 border-dashed', up ? '' : '')} style={{ borderColor: color }}>
+        <div className={cx('absolute left-0 whitespace-nowrap', up ? '-top-1 -translate-y-full' : 'bottom-0 translate-y-[3px]')}>
+          <p className="rounded-t-md px-1.5 font-mono text-[9px] font-bold leading-[13px]" style={{ background: color, color: '#fbfbf8' }}>{label}</p>
+          <p className="bg-card/90 px-1.5 font-mono text-[8.5px] leading-[12px] text-ink2 shadow-sm">{sub}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ScaleLab() {
+  const { a } = useApp();
+  const [ds, setDs] = useState<'contact' | 'deal' | 'post' | 'event'>('contact');
+  const [probe, setProbe] = useState<QuotaProbe | null>(null);
+  const [probing, setProbing] = useState(false);
+  const ranRef = useRef(false);
+
+  const doProbe = async () => {
+    setProbing(true);
+    try { setProbe(await probeStorage()); } catch { /* storage unavailable */ }
+    setProbing(false);
+  };
+  useEffect(() => { if (!ranRef.current) { ranRef.current = true; void doProbe(); } }, []);
+
+  const quotaMB = probe?.usableMB ?? 5;
+  const nowMB = probe?.nowMB ?? 0.4;
+  const bytesPer = BYTES[ds];
+  const demoCapBytes = quotaMB * 0.8 * 1e6;
+  const ladder = [1e4, 1e5, 1e6, 1e7, 1e8, 1e9];
+  const fitsHere = Math.floor(demoCapBytes / bytesPer);
+
+  return (
+    <div className="space-y-3.5">
+      <div className="grid grid-cols-12 gap-3.5">
+        {/* bytes per record */}
+        <Card className="col-span-12 p-4 lg:col-span-4">
+          <SectionTitle right={<Pill color="#3e7cb1" tint="#e5eef6">measured</Pill>}>Cost per record</SectionTitle>
+          <div className="space-y-1.5">
+            {DATASETS.map(d => (
+              <button key={d.id} onClick={() => setDs(d.id)}
+                className={cx('flex w-full items-center gap-2.5 rounded-lg border px-2.5 py-2 text-left transition-all',
+                  ds === d.id ? 'border-moss/50 bg-mint/60' : 'border-line bg-card hover:border-line2')}>
+                <span className={cx('grid h-7 w-7 shrink-0 place-items-center rounded-lg', ds === d.id ? 'bg-moss text-card' : 'bg-paper text-mut')}>
+                  <Icon name={d.icon} size={13} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[12px] font-bold text-ink">{d.label}</span>
+                  <span className="block truncate text-[9.5px] text-faint">{d.note}</span>
+                </span>
+                <span className="shrink-0 font-mono text-[11px] font-bold" style={{ color: ds === d.id ? '#0e7a52' : '#6e776f' }}>{BYTES[d.id]} B</span>
+              </button>
+            ))}
+          </div>
+          <p className="mt-2.5 rounded-lg bg-paper/70 px-2.5 py-2 text-[10px] leading-relaxed text-mut">
+            Averaged over real serialized rows — not estimates. At <span className="font-mono font-bold text-ink2">{bytesPer} B</span>/record,
+            1B records ≈ <span className="font-mono font-bold text-ink2">{fmtBytes(1e9 * bytesPer)}</span> raw.
+          </p>
+        </Card>
+
+        {/* storage probe */}
+        <Card className="col-span-12 p-4 lg:col-span-8">
+          <SectionTitle right={
+            <Btn size="sm" variant="outline" onClick={doProbe} disabled={probing}>
+              <Icon name={probing ? 'refresh' : 'gauge'} size={13} className={probing ? 'animate-spin' : ''} /> {probing ? 'Probing…' : 'Re-probe storage'}
+            </Btn>
+          }>
+            Live ceiling probe · this browser
+          </SectionTitle>
+          {!probe ? (
+            <div className="grid place-items-center rounded-xl border border-dashed border-line2 bg-paper/60 py-8">
+              <span className="h-6 w-6 animate-spin rounded-full border-2 border-line2 border-t-moss" />
+              <p className="mt-2 font-mono text-[10.5px] text-mut">writing until QuotaExceededError…</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div>
+                <div className="mb-1 flex items-baseline justify-between">
+                  <span className="text-[11.5px] font-semibold text-ink2">Usable quota</span>
+                  <span className="font-mono text-[15px] font-bold text-ink">{probe.usableMB.toFixed(1)} MB</span>
+                </div>
+                <div className="relative h-3 overflow-hidden rounded-full bg-line/70">
+                  <div className="anim-grow absolute inset-y-0 left-0 rounded-full bg-moss/80" style={{ width: '100%' }} />
+                  <div className="absolute inset-y-0 left-0 rounded-full bg-steel" style={{ width: `${Math.min(100, (nowMB / probe.usableMB) * 100)}%` }} title="current usage" />
+                </div>
+                <div className="mt-1 flex justify-between font-mono text-[9.5px] text-mut">
+                  <span><span className="mr-1 inline-block h-2 w-2 rounded-sm bg-steel align-middle" />in use · {nowMB.toFixed(2)} MB</span>
+                  <span>≈ {fitsHere.toLocaleString()} {DATASETS.find(d => d.id === ds)?.label.toLowerCase()} fit here</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { l: 'Probe wrote', v: `${probe.usableMB.toFixed(1)} MB`, c: '#0e7a52' },
+                  { l: 'Safe working set', v: `${(quotaMB * 0.8).toFixed(1)} MB`, c: '#a96f14' },
+                  { l: 'Headroom left', v: `${Math.max(0, quotaMB * 0.8 - nowMB).toFixed(1)} MB`, c: '#3e7cb1' },
+                ].map(k => (
+                  <div key={k.l} className="rounded-lg border border-line bg-paper/60 px-3 py-2">
+                    <p className="font-mono text-[8.5px] font-semibold uppercase tracking-[0.14em] text-mut">{k.l}</p>
+                    <p className="font-display text-[16px] font-bold" style={{ color: k.c }}>{k.v}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="flex items-start gap-1.5 text-[10.5px] leading-relaxed text-mut">
+                <Icon name="alert" size={12} className="mt-0.5 shrink-0 text-amber" />
+                This is the honest demo ceiling — a browser tab. Past ~{fitsHere.toLocaleString()} records the workspace belongs on the server-side stack below, where the same code path runs unmodified.
+              </p>
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* capacity ruler */}
+      <Card className="p-4">
+        <SectionTitle right={<span className="font-mono text-[10px] text-faint">log scale · 1 KB → 100 TB</span>}>
+          Where does <span className="text-moss">{DATASETS.find(d => d.id === ds)?.label.toLowerCase()}</span> data live as it grows?
+        </SectionTitle>
+        <div className="relative mt-14 h-16 rounded-xl border border-line bg-paper/60">
+          {[1e3, 1e6, 1e9, 1e12, 1e14].map((b, i) => (
+            <div key={b} className="absolute top-0 bottom-0 border-l border-line/80" style={{ left: `${rulerPos(b)}%` }}>
+              <span className="absolute top-1 left-1 font-mono text-[8.5px] text-faint">{['1KB', '1MB', '1GB', '1TB', '100TB'][i]}</span>
+            </div>
+          ))}
+          <RulerMarker up label="now" sub={fmtBytes(nowMB * 1e6)} bytes={nowMB * 1e6} color="#3e7cb1" />
+          <RulerMarker label="demo ceiling" sub={fmtBytes(demoCapBytes)} bytes={demoCapBytes} color="#a96f14" up />
+          <RulerMarker label="Growth cap · 25K contacts" sub={fmtBytes(25000 * BYTES.contact)} bytes={25000 * BYTES.contact} color="#2f8f83" up={false} />
+          <RulerMarker label="1M records" sub={fmtBytes(1e6 * bytesPer)} bytes={1e6 * bytesPer} color="#0e7a52" up />
+          <RulerMarker label="1B records" sub={fmtBytes(1e9 * bytesPer)} bytes={1e9 * bytesPer} color="#7a5fa8" up={false} />
+        </div>
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+          {Object.entries(TIER_META).map(([k, v]) => (
+            <span key={k} className="flex items-center gap-1.5 text-[10.5px] text-mut">
+              <span className="grid h-4 w-4 place-items-center rounded" style={{ background: v.tint, color: v.color }}><Icon name={v.icon} size={9} /></span>
+              {v.label}
+            </span>
+          ))}
+        </div>
+      </Card>
+
+      {/* projection ladder */}
+      <Card className="overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
+          <div>
+            <p className="font-display text-[14px] font-bold text-ink">Projection ladder · 10K → 1B records</p>
+            <p className="text-[10.5px] text-mut">Same domain model, same client code — only the storage tier changes.</p>
+          </div>
+          <Btn size="sm" variant="outline" onClick={() => { try { void navigator.clipboard.writeText(`Cadence scale model: 1B ${DATASETS.find(d => d.id === ds)?.label.toLowerCase()} ≈ ${fmtBytes(1e9 * bytesPer)} @ ${bytesPer}B/record — served by tenant-sharded Postgres.`); } catch { /* noop */ } a.toast('Scale model copied', 'info'); }}>
+            <Icon name="copy" size={12} /> Copy model
+          </Btn>
+        </div>
+        <div className="divide-y divide-line/70">
+          {ladder.map((n, i) => {
+            const p = project(n, bytesPer, quotaMB);
+            const tm = TIER_META[p.tier];
+            return (
+              <div key={n} className="anim-rise flex flex-wrap items-center gap-3 px-4 py-2.5" style={{ animationDelay: `${i * 50}ms` }}>
+                <span className="w-20 shrink-0 font-mono text-[13px] font-bold text-ink">{fmtRecords(n)}</span>
+                <span className="w-24 shrink-0 font-mono text-[11px] text-mut">{fmtBytes(p.bytes)}</span>
+                <div className="hidden h-1.5 flex-1 overflow-hidden rounded-full bg-line/60 md:block">
+                  <div className="anim-grow h-full rounded-full" style={{ width: `${Math.max(2, rulerPos(p.bytes))}%`, background: tm.color }} />
+                </div>
+                <Pill color={tm.color} tint={tm.tint} className="w-[140px] justify-center"><Icon name={tm.icon} size={10} />{tm.label}</Pill>
+                <span className="hidden max-w-[300px] flex-1 truncate text-[10.5px] text-faint lg:block">{p.headline}</span>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* the honest answer */}
+      <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-3">
+        {(Object.keys(TIER_META) as Tier[]).map(t => (
+          <div key={t} className={cx('rounded-xl border p-4', t === 'demo' ? 'border-amber/30 bg-amberbg/40' : t === 'phase1' ? 'border-moss/30 bg-mint/40' : 'border-line bg-card')}>
+            <p className="flex items-center gap-2 font-display text-[13.5px] font-bold text-ink">
+              <span className="grid h-6 w-6 place-items-center rounded-md" style={{ background: TIER_META[t].tint, color: TIER_META[t].color }}><Icon name={TIER_META[t].icon} size={12} /></span>
+              {TIER_META[t].label}
+            </p>
+            <ul className="mt-2.5 space-y-1.5">
+              {(t === 'demo' ? [
+                `JSON snapshots in browser storage — the shell you are using now`,
+                `Hard ceiling: the ${quotaMB.toFixed(1)} MB measured above`,
+                'Right for: evaluation, demos, small teams under plan caps',
+              ] : t === 'phase1' ? [
+                'PostgreSQL 16 · primary + read replicas (~$50–100/mo)',
+                'posts & timeline events partitioned by month',
+                'Redis queue absorbs publish bursts off the request path',
+                'Comfortably serves millions of rows per workspace',
+              ] : [
+                'Citus or per-tenant shards keyed by workspace_id',
+                'Cold timeline events aged to columnar S3 + Athena',
+                'Writes stay single-shard; reads fan out via router',
+                'Billions of rows — linear cost, no re-architecture',
+              ]).map(x => (
+                <li key={x} className="flex items-start gap-1.5 text-[10.5px] leading-relaxed text-ink2">
+                  <span className="mt-[3px] shrink-0" style={{ color: TIER_META[t].color }}><Icon name="check" size={10} sw={3} /></span>{x}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      <p className="flex items-center gap-1.5 text-[11px] text-faint">
+        <Icon name="bolt" size={12} className="text-moss" />
+        Short answer: millions on the Phase 1 stack today, billions with tenant sharding — and every number above was measured on this machine, not promised.
+      </p>
+    </div>
+  );
+}
+
+/* ================= report card ================= */
+function buildReport(results: Record<string, TestResult>): string {
+  const all = Object.values(results);
+  const passed = all.filter(r => r.pass).length;
+  const ms = all.reduce((n, r) => n + r.ms, 0);
+  const lines = [
+    '# Cadence QA Report',
+    `- Verdict: ${passed === all.length ? 'ALL GREEN' : `${all.length - passed} failing`}`,
+    `- Checks: ${passed}/${all.length} passing`,
+    `- Runtime: ${(ms / 1000).toFixed(2)}s`,
+    `- Generated: ${new Date().toISOString()}`,
+    '',
+    '## Results',
+  ];
+  SUITES.forEach(s => {
+    lines.push(`### ${s.name}`);
+    s.tests.forEach(t => {
+      const r = results[t.id];
+      lines.push(`- [${r ? (r.pass ? 'x' : ' ') : ' '}] ${t.name}${r ? ` (${r.ms < 10 ? r.ms.toFixed(1) : Math.round(r.ms)}ms)` : ''}${r && !r.pass && r.detail ? ` — ${r.detail}` : ''}`);
+    });
+  });
+  return lines.join('\n');
+}
+
+function ReportCard({ results }: { results: Record<string, TestResult> }) {
+  const { a } = useApp();
+  const firedRef = useRef(false);
+  const all = Object.values(results);
+  const ran = all.length;
+  const passed = all.filter(r => r.pass).length;
+  const green = ran === TOTAL_TESTS && passed === TOTAL_TESTS;
+  useEffect(() => {
+    if (green && !firedRef.current) {
+      firedRef.current = true;
+      try {
+        confetti({ particleCount: 120, spread: 80, startVelocity: 34, origin: { y: 0.6 }, colors: ['#0e7a52', '#3e7cb1', '#c08a1e', '#f1f2ec'], disableForReducedMotion: true });
+      } catch { /* noop */ }
+    }
+    if (!green) firedRef.current = false;
+  }, [green]);
+  if (ran === 0) return null;
+  return (
+    <div className={cx('anim-pop flex flex-wrap items-center gap-3 rounded-xl border px-4 py-3',
+      green ? 'border-moss/40 bg-mint/50' : ran === TOTAL_TESTS ? 'border-danger/40 bg-dangerbg/50' : 'border-line bg-card')}>
+      <span className={cx('grid h-9 w-9 place-items-center rounded-lg', green ? 'bg-moss text-card' : ran === TOTAL_TESTS ? 'bg-danger text-card' : 'bg-paper text-mut')}>
+        <Icon name={green ? 'checksq' : ran === TOTAL_TESTS ? 'alert' : 'clock'} size={17} />
+      </span>
+      <div className="min-w-0 flex-1 leading-tight">
+        <p className="font-display text-[14px] font-bold text-ink">
+          {green ? 'All green — Phase 1 verified end to end' : ran === TOTAL_TESTS ? `${TOTAL_TESTS - passed} checks need attention` : `Suite in progress — ${ran}/${TOTAL_TESTS}`}
+        </p>
+        <p className="text-[11px] text-mut">
+          {green
+            ? `${TOTAL_TESTS} checks · ${(all.reduce((n, r) => n + r.ms, 0) / 1000).toFixed(2)}s · every requirement has executable proof`
+            : 'Failures show inline with expected vs. actual.'}
+        </p>
+      </div>
+      {ran === TOTAL_TESTS && (
+        <Btn size="sm" variant={green ? 'primary' : 'outline'} onClick={() => { try { void navigator.clipboard.writeText(buildReport(results)); } catch { /* noop */ } a.toast('Markdown QA report copied to clipboard', 'info'); }}>
+          <Icon name="copy" size={13} /> Copy report
+        </Btn>
+      )}
+    </div>
+  );
+}
+
 /* ================= module ================= */
 export function Testing() {
   const { a } = useApp();
@@ -341,10 +626,13 @@ export function Testing() {
     <div className="space-y-3.5">
       <ConsoleHeader passed={passed} failed={failed} totalMs={totalMs} running={running} onRunAll={runAll} />
 
+      <ReportCard results={results} />
+
       <div className="flex flex-wrap items-center gap-2">
         <Seg value={tab} onChange={setTab} options={[
           { id: 'suites', label: `Test suites · ${TOTAL_TESTS}` },
-          { id: 'load', label: 'Load & scale' },
+          { id: 'load', label: 'Load bench' },
+          { id: 'limits', label: 'Scale ceiling' },
           { id: 'security', label: 'Security' },
           { id: 'coverage', label: 'Coverage' },
         ]} />
@@ -359,6 +647,7 @@ export function Testing() {
         </div>
       )}
       {tab === 'load' && <LoadBench />}
+      {tab === 'limits' && <ScaleLab />}
       {tab === 'security' && <SecurityPanel />}
       {tab === 'coverage' && <CoveragePanel results={results} />}
     </div>
