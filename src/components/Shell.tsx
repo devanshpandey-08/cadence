@@ -16,6 +16,11 @@ const TITLES: Record<View, { t: string; s: string }> = {
   calendar: { t: 'Content Calendar', s: 'Plan, approve and publish everywhere' },
   campaigns: { t: 'Email Campaigns', s: 'Broadcasts delivered through your own SMTP' },
   marketing: { t: 'Forms & Pages', s: 'Capture leads and convert on landing pages' },
+  ai: { t: 'AI Studio', s: 'Phase 3 — on-device copilot for posts, replies, scoring' },
+  automations: { t: 'Automations', s: 'Phase 2 — drip sequences that run while you sleep' },
+  listening: { t: 'Social Listening', s: 'Phase 2 — every mention, scored and streamed' },
+  calls: { t: 'Calls', s: 'Phase 2 — VoIP dialing that logs itself to the CRM' },
+  ads: { t: 'Ads Manager', s: 'Phase 3 — spend, pacing and ROAS across networks' },
   testing: { t: 'QA Console', s: 'Automated suites, load benchmarks and live security probes' },
   settings: { t: 'Settings', s: 'Team, channels, plan and integrations' },
 };
@@ -65,6 +70,21 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
         { v: 'calendar', icon: 'calendar', label: 'Calendar', badge: pending, badgeColor: '#c08a1e' },
         { v: 'campaigns', icon: 'mail', label: 'Campaigns' },
         { v: 'marketing', icon: 'layout', label: 'Forms & Pages' },
+      ],
+    },
+    {
+      label: 'Intelligence · P3',
+      items: [
+        { v: 'ai', icon: 'bolt', label: 'AI Studio' },
+        { v: 'listening', icon: 'globe', label: 'Listening' },
+        { v: 'ads', icon: 'trend', label: 'Ads Manager' },
+      ],
+    },
+    {
+      label: 'Growth · P2',
+      items: [
+        { v: 'automations', icon: 'refresh', label: 'Automations' },
+        { v: 'calls', icon: 'phone', label: 'Calls' },
       ],
     },
     {

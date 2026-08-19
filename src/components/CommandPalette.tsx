@@ -6,16 +6,21 @@ import type { View } from '../types';
 import { Avatar } from './ui';
 
 export const GMAP: Record<string, View> = {
-  d: 'dashboard', i: 'inbox', t: 'tasks', c: 'contacts', p: 'deals', s: 'calendar', m: 'campaigns', f: 'marketing', q: 'testing', x: 'settings',
+  d: 'dashboard', i: 'inbox', t: 'tasks', c: 'contacts', p: 'deals', s: 'calendar', m: 'campaigns', f: 'marketing',
+  a: 'ai', u: 'automations', l: 'listening', k: 'calls', r: 'ads', q: 'testing', x: 'settings',
 };
 
 const NAV_LABEL: Record<View, string> = {
   dashboard: 'Dashboard', inbox: 'Inbox', tasks: 'Tasks', contacts: 'Contacts', deals: 'Deal pipeline',
-  calendar: 'Content calendar', campaigns: 'Email campaigns', marketing: 'Forms & pages', testing: 'QA console', settings: 'Settings',
+  calendar: 'Content calendar', campaigns: 'Email campaigns', marketing: 'Forms & pages',
+  ai: 'AI Studio', automations: 'Automations', listening: 'Social listening', calls: 'Calls', ads: 'Ads Manager',
+  testing: 'QA console', settings: 'Settings',
 };
 const NAV_ICON: Record<View, string> = {
   dashboard: 'dash', inbox: 'inbox', tasks: 'checksq', contacts: 'users', deals: 'kanban',
-  calendar: 'calendar', campaigns: 'mail', marketing: 'layout', testing: 'shield', settings: 'sliders',
+  calendar: 'calendar', campaigns: 'mail', marketing: 'layout',
+  ai: 'bolt', automations: 'refresh', listening: 'globe', calls: 'phone', ads: 'trend',
+  testing: 'shield', settings: 'sliders',
 };
 
 interface Item {
