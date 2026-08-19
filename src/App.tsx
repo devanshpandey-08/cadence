@@ -16,6 +16,7 @@ import { Ads } from './modules/Ads';
 import { Tasks } from './modules/Tasks';
 import { Testing } from './modules/Testing';
 import { Settings } from './modules/Settings';
+import { Launch } from './modules/Launch';
 import { Composer } from './modules/Composer';
 
 function Router() {
@@ -33,6 +34,7 @@ function Router() {
     case 'listening': return <Listening />;
     case 'calls': return <Calls />;
     case 'ads': return <Ads />;
+    case 'launch': return <Launch />;
     case 'testing': return <Testing />;
     case 'settings': return <Settings />;
     default: return <Dashboard />;

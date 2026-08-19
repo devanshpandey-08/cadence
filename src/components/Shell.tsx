@@ -21,6 +21,7 @@ const TITLES: Record<View, { t: string; s: string }> = {
   listening: { t: 'Social Listening', s: 'Phase 2 — every mention, scored and streamed' },
   calls: { t: 'Calls', s: 'Phase 2 — VoIP dialing that logs itself to the CRM' },
   ads: { t: 'Ads Manager', s: 'Phase 3 — spend, pacing and ROAS across networks' },
+  launch: { t: 'Launch Console', s: 'Pre-flight to production: multi-tenant, billing, platform APIs' },
   testing: { t: 'QA Console', s: 'Automated suites, load benchmarks and live security probes' },
   settings: { t: 'Settings', s: 'Team, channels, plan and integrations' },
 };
@@ -87,6 +88,7 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
     {
       label: 'Workspace',
       items: [
+        { v: 'launch', icon: 'pulse', label: 'Launch Console' },
         { v: 'testing', icon: 'shield', label: 'QA Console' },
         { v: 'settings', icon: 'sliders', label: 'Settings' },
       ],
@@ -400,7 +402,7 @@ const GROUP_OF: Record<View, string> = {
   calendar: 'Marketing', campaigns: 'Marketing', marketing: 'Marketing',
   ai: 'Intelligence', listening: 'Intelligence', ads: 'Intelligence',
   automations: 'Growth', calls: 'Growth',
-  testing: 'Workspace', settings: 'Workspace',
+  launch: 'Workspace', testing: 'Workspace', settings: 'Workspace',
 };
 
 function Topbar({ onMenu }: { onMenu: () => void }) {
