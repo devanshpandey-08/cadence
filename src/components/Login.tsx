@@ -147,20 +147,22 @@ export function Login() {
         </div>
 
         <div className="relative">
-          <p className="font-mono text-[10.5px] font-semibold uppercase tracking-[0.2em] text-moss">One database · every channel</p>
-          <h1 className="mt-3 max-w-[430px] font-display text-[40px] font-bold leading-[1.04] tracking-tight text-card">
+          <p className="flex items-center gap-2 font-mono text-[10.5px] font-semibold uppercase tracking-[0.24em] text-[#3ecf95]">
+            <span className="live-dot h-1.5 w-1.5 rounded-full bg-[#3ecf95]" /> One database · every channel
+          </p>
+          <h1 className="mt-3.5 max-w-[460px] font-display text-[44px] font-bold leading-[1.02] tracking-tight text-card">
             Buffer schedules posts.<br />HubSpot tracks customers.<br />
-            <span className="text-moss">We built both in one tool.</span>
+            <span className="text-[#3ecf95]">We built both in one tool.</span>
           </h1>
 
           <LiveVignette />
         </div>
 
-        <div className="relative flex flex-wrap items-center gap-x-5 gap-y-1 font-mono text-[10px] text-nighttx">
-          <span>PostgreSQL · one schema</span><span className="text-nightline">|</span>
-          <span>Redis publish queue</span><span className="text-nightline">|</span>
-          <span>Your SMTP, not ours</span><span className="text-nightline">|</span>
-          <span>$0 marginal AI cost</span>
+        <div className="relative flex flex-wrap items-center gap-x-4 gap-y-1.5 font-mono text-[10px] text-nighttx">
+          <span className="flex items-center gap-1.5"><span className="h-1 w-1 rounded-full bg-moss" />PostgreSQL · one schema</span>
+          <span className="flex items-center gap-1.5"><span className="h-1 w-1 rounded-full bg-steel" />Redis publish queue</span>
+          <span className="flex items-center gap-1.5"><span className="h-1 w-1 rounded-full bg-amber" />Your SMTP, not ours</span>
+          <span className="flex items-center gap-1.5"><span className="h-1 w-1 rounded-full bg-nighttx" />$0 marginal AI cost</span>
         </div>
       </div>
 

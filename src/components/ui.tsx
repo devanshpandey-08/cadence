@@ -325,7 +325,10 @@ export function Card({ children, className, style, hover }: { children: ReactNod
 export function SectionTitle({ children, right }: { children: ReactNode; right?: ReactNode }) {
   return (
     <div className="mb-3 flex items-center justify-between gap-3">
-      <h2 className="font-display text-[15px] font-bold tracking-tight text-ink">{children}</h2>
+      <h2 className="flex items-center gap-2 font-display text-[15px] font-bold tracking-tight text-ink">
+        <span className="inline-block h-[14px] w-[3px] rounded-full bg-moss/70" />
+        {children}
+      </h2>
       {right}
     </div>
   );

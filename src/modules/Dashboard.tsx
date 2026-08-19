@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../store';
 import { metricsFor } from '../data';
 import {
-  addDays, cx, fmtDate, fmtLong, Icon, kfmt, money, PLATFORMS, PlatformIcon, relTime, STATUSES, STATUS_ICON, TODAY,
+  addDays, cx, fmtDate, fmtLong, Icon, kfmt, money, pad, PLATFORMS, PlatformIcon, relTime, STATUSES, STATUS_ICON, TODAY,
 } from '../meta';
 import type { Platform, Source } from '../types';
 import { Avatar, Btn, Card, CountUp, EmptyState, Pill, SectionTitle, Seg, Spark, StageBar } from '../components/ui';
@@ -13,19 +13,25 @@ const SOURCE_COLORS: Record<Source, string> = {
   Form: '#3e7cb1', Import: '#7a5fa8', Social: '#0e7a52', Manual: '#6e776f', Webinar: '#a96f14', Chat: '#2f8f83',
 };
 
-function KpiTile({ label, value, prefix, suffix, series, color, delta, foot }: {
-  label: string; value: number; prefix?: string; suffix?: string; series: number[]; color: string; delta: string; foot?: string;
+function KpiTile({ label, value, prefix, suffix, series, color, delta, foot, icon }: {
+  label: string; value: number; prefix?: string; suffix?: string; series: number[]; color: string; delta: string; foot?: string; icon: string;
 }) {
   return (
-    <Card className="flex flex-col justify-between p-4" hover>
+    <Card className="relative flex flex-col justify-between overflow-hidden p-4" hover>
+      <span className="absolute inset-x-0 top-0 h-[3px]" style={{ background: `linear-gradient(90deg, ${color}, ${color}33)` }} />
       <div>
-        <p className="font-mono text-[9.5px] font-semibold uppercase tracking-[0.16em] text-mut">{label}</p>
-        <div className="mt-1.5 flex items-baseline gap-2">
-          <CountUp value={value} prefix={prefix} suffix={suffix} className="font-display text-[25px] font-bold leading-none tracking-tight text-ink" />
-          <span className="flex items-center gap-0.5 font-mono text-[10.5px] font-semibold text-moss"><Icon name="trend" size={11} />{delta}</span>
+        <div className="flex items-center justify-between">
+          <p className="font-mono text-[9.5px] font-semibold uppercase tracking-[0.18em] text-mut">{label}</p>
+          <span className="grid h-6 w-6 place-items-center rounded-md" style={{ background: `${color}16`, color }}>
+            <Icon name={icon} size={12} />
+          </span>
+        </div>
+        <div className="mt-2 flex items-baseline gap-2">
+          <CountUp value={value} prefix={prefix} suffix={suffix} className="tnum font-display text-[27px] font-bold leading-none tracking-tight text-ink" />
+          <span className="flex items-center gap-0.5 rounded-full bg-mint px-1.5 py-0.5 font-mono text-[10px] font-bold text-pine"><Icon name="trend" size={10} sw={2.4} />{delta}</span>
         </div>
       </div>
-      <div className="mt-2 flex items-end justify-between gap-2">
+      <div className="mt-2.5 flex items-end justify-between gap-2">
         <p className="text-[10.5px] text-faint">{foot ?? 'vs previous period'}</p>
         <Spark data={series} color={color} w={96} h={30} />
       </div>
@@ -93,6 +99,21 @@ function LaunchChecklist() {
         </button>
       </div>
     </div>
+  );
+}
+
+/* A clock that proves the room is occupied. */
+function LiveClock() {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(t);
+  }, []);
+  return (
+    <span className="tnum normal-case tracking-normal text-ink2">
+      {pad(now.getHours())}:{pad(now.getMinutes())}
+      <span className="text-faint">:{pad(now.getSeconds())}</span>
+    </span>
   );
 }
 
@@ -177,13 +198,16 @@ export function Dashboard() {
 
       {/* KPI row */}
       <div className="grid grid-cols-12 gap-4">
-        <Card className="col-span-12 p-4 lg:col-span-5" hover>
+        <Card className="relative col-span-12 overflow-hidden p-4 lg:col-span-5" hover>
+          <span className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-moss via-moss/60 to-transparent" />
           <div className="flex items-start justify-between">
             <div>
-              <p className="font-mono text-[9.5px] font-semibold uppercase tracking-[0.16em] text-mut">Open pipeline</p>
-              <CountUp value={pipeline} prefix="$" className="font-display text-[30px] font-bold leading-tight tracking-tight text-ink" />
+              <p className="flex items-center gap-1.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.18em] text-mut">
+                <Icon name="kanban" size={11} className="text-moss" /> Open pipeline
+              </p>
+              <CountUp value={pipeline} prefix="$" className="tnum mt-1 font-display text-[32px] font-bold leading-none tracking-tight text-ink" />
             </div>
-            <Pill color="#0e7a52" tint="#e2efe7" dot>{openDeals.length} deals open</Pill>
+            <Pill color="#0e7a52" tint="#e2efe7" dot className="tnum">{openDeals.length} deals open</Pill>
           </div>
           <StageBar deals={s.deals} className="mt-3" />
           <div className="mt-3 flex items-center gap-4 border-t border-line pt-3 text-xs">
@@ -192,9 +216,9 @@ export function Dashboard() {
           </div>
         </Card>
         <div className="stagger col-span-12 grid grid-cols-1 gap-4 sm:grid-cols-3 lg:col-span-7">
-          <KpiTile label="New contacts" value={m.newContacts} series={m.newContactsSeries} color="#0e7a52" delta="+18%" foot="forms, imports & social" />
-          <KpiTile label="Engagement" value={m.engagement} series={m.engagementSeries} color="#3e7cb1" delta="+24%" foot="likes, comments, shares" />
-          <KpiTile label="Emails sent" value={m.emailsSent} suffix="" series={m.emailSeries} color="#a96f14" delta="+9%" foot={`${m.openRate}% avg open rate`} />
+          <KpiTile label="New contacts" value={m.newContacts} series={m.newContactsSeries} color="#0e7a52" delta="+18%" foot="forms, imports & social" icon="users" />
+          <KpiTile label="Engagement" value={m.engagement} series={m.engagementSeries} color="#3e7cb1" delta="+24%" foot="likes, comments, shares" icon="heart" />
+          <KpiTile label="Emails sent" value={m.emailsSent} suffix="" series={m.emailSeries} color="#a96f14" delta="+9%" foot={`${m.openRate}% avg open rate`} icon="mail" />
         </div>
       </div>
 
