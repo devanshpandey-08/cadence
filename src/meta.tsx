@@ -191,6 +191,6 @@ export const STATUS_ICON: Record<PostStatus, string> = {
 };
 
 /* ---------- misc ---------- */
-export const AV_COLORS = ['#14140f', '#3d6bff', '#e86a17', '#ff5ca8', '#2e9e4f', '#29c6a7', '#e5484d', '#8a63d2'];
+export const AV_COLORS = ['#0b7a55', '#3b6fd4', '#e0713a', '#c2557d', '#2aa8a0', '#8a63d2', '#b26e14', '#5c6b5e'];
 export const hashColor = (s: string) => AV_COLORS[(s.charCodeAt(0) + s.length) % AV_COLORS.length];
 export const initials = (name: string) => name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();

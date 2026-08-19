@@ -66,8 +66,8 @@ function LaunchChecklist() {
       <div className="relative flex flex-wrap items-center gap-4">
         <div className="relative h-[54px] w-[54px] shrink-0">
           <svg width="54" height="54" viewBox="0 0 54 54" className="-rotate-90">
-            <circle cx="27" cy="27" r="22" fill="none" stroke="#29332b" strokeWidth="5" />
-            <circle cx="27" cy="27" r="22" fill="none" stroke="#c8f169" strokeWidth="5" strokeLinecap="round"
+            <circle cx="27" cy="27" r="22" fill="none" stroke="#2d2d22" strokeWidth="5" />
+            <circle cx="27" cy="27" r="22" fill="none" stroke="#2fbf8f" strokeWidth="5" strokeLinecap="round"
               strokeDasharray={C} strokeDashoffset={C - (doneCount / items.length) * C}
               className="transition-all duration-700 ease-out" />
           </svg>
@@ -178,7 +178,7 @@ export function Dashboard() {
             <span className="inline-block h-[6px] w-[6px] rounded-[2px] bg-moss" />{fmtLong(TODAY)} · <LiveClock />
           </p>
           <h1 className="mt-2 font-display text-[30px] font-bold leading-[1.05] tracking-tight text-ink">
-            {greeting}, {(s.me ?? s.users[0]).name.split(' ')[0]} — <span className="whitespace-nowrap rounded-md border-2 border-ink bg-lime px-1.5">{todayPosts.length} post{todayPosts.length === 1 ? '' : 's'}</span> go out today.
+            {greeting}, {(s.me ?? s.users[0]).name.split(' ')[0]} — <span className="whitespace-nowrap text-moss">{todayPosts.length} post{todayPosts.length === 1 ? '' : 's'}</span> go out today.
           </h1>
           <p className="mt-1.5 flex flex-wrap items-center gap-2 text-[13px] text-mut">
             <span>
@@ -195,17 +195,16 @@ export function Dashboard() {
       </div>
 
       {/* live data ticker */}
-      <div className="overflow-hidden rounded-lg border-2 border-ink bg-ink py-1.5 shadow-hard-sm">
-        <div className="marquee flex w-max items-center gap-7" style={{ ['--speed' as string]: '30s' }}>
+      <div className="overflow-hidden rounded-lg border border-line bg-night py-1.5">
+        <div className="marquee flex w-max items-center gap-7" style={{ ['--speed' as string]: '32s' }}>
           {[0, 1].map(dup => (
-            <span key={dup} className="flex items-center gap-7 font-mono text-[10.5px] font-bold uppercase tracking-[0.14em] text-card/85">
-              <span><span className="text-lime">✦</span> pipeline {money(pipeline)}</span>
-              <span><span className="text-pink">✦</span> {todayPosts.length} posts today</span>
-              <span><span className="text-butter">✦</span> {pending.length} awaiting approval</span>
-              <span><span className="text-[#9db8ff]">✦</span> {s.threads.filter(t => t.status === 'unread').length} unread in inbox</span>
-              <span><span className="text-teal">✦</span> win rate {winRate}%</span>
-              <span><span className="text-lime">✦</span> {s.accounts.filter(x => x.connected).length} channels live</span>
-              <span><span className="text-pink">✦</span> smtp: gmail connected</span>
+            <span key={dup} className="flex items-center gap-7 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-nighttx">
+              <span><span className="text-lime">·</span> pipeline {money(pipeline)}</span>
+              <span><span className="text-lime">·</span> {todayPosts.length} posts today</span>
+              <span><span className="text-lime">·</span> {pending.length} awaiting approval</span>
+              <span><span className="text-lime">·</span> {s.threads.filter(t => t.status === 'unread').length} unread in inbox</span>
+              <span><span className="text-lime">·</span> win rate {winRate}%</span>
+              <span><span className="text-lime">·</span> {s.accounts.filter(x => x.connected).length} channels live</span>
             </span>
           ))}
         </div>
@@ -216,11 +215,11 @@ export function Dashboard() {
       {/* KPI row */}
       <div className="grid grid-cols-12 gap-4">
         <Card className="relative col-span-12 overflow-hidden p-4 lg:col-span-5" hover>
-          <span className="absolute inset-x-0 top-0 h-[5px] bg-lime" />
+          <span className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-moss via-moss/50 to-transparent" />
           <div className="flex items-start justify-between">
             <div>
-              <p className="flex items-center gap-1.5 font-mono text-[9.5px] font-bold uppercase tracking-[0.18em] text-mut">
-                <span className="grid h-5 w-5 place-items-center rounded-md border-[1.5px] border-ink bg-butter"><Icon name="kanban" size={11} sw={2.2} /></span> Open pipeline
+              <p className="flex items-center gap-1.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.16em] text-mut">
+                <span className="grid h-5 w-5 place-items-center rounded-md bg-mint text-moss"><Icon name="kanban" size={11} sw={2.2} /></span> Open pipeline
               </p>
               <CountUp value={pipeline} prefix="$" className="tnum mt-1 font-display text-[32px] font-bold leading-none tracking-tight text-ink" />
             </div>

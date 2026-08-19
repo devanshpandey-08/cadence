@@ -32,7 +32,7 @@ function ConsoleHeader({ passed, failed, totalMs, running, onRunAll }: {
       </div>
       <div className="flex flex-wrap items-center gap-x-6 gap-y-3 px-5 py-4">
         <div className="flex items-center gap-3">
-          <span className="grid h-11 w-11 place-items-center rounded-xl border-2 border-ink bg-lime text-ink shadow-hard-sm"><Icon name="terminal" size={22} sw={2.2} /></span>
+          <span className="grid h-11 w-11 place-items-center rounded-xl bg-moss/25 text-lime"><Icon name="terminal" size={22} sw={2} /></span>
           <div>
             <p className="font-mono text-[12px] text-nighttx">$ cadence qa --run-all</p>
             <p className="font-display text-[22px] font-bold leading-tight tracking-tight">

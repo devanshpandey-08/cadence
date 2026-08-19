@@ -507,10 +507,10 @@ export function AIStudio() {
   const active = TOOLS.find(t => t.id === tool) ?? TOOLS[0];
   return (
     <div className="space-y-3.5">
-      <div className="glow-top relative overflow-hidden rounded-xl border-2 border-ink bg-night p-4 text-card shadow-hard-lg">
+      <div className="glow-top relative overflow-hidden rounded-xl border border-nightline bg-night p-4 text-card">
         <div className="bg-dots pointer-events-none absolute inset-0 opacity-30" />
         <div className="relative flex flex-wrap items-center gap-4">
-          <span className="sticker grid h-11 w-11 place-items-center rounded-xl border-2 border-ink bg-lime text-ink shadow-hard-sm"><Icon name="bolt" size={22} sw={2.2} /></span>
+          <span className="sticker grid h-11 w-11 place-items-center rounded-xl bg-moss/25 text-lime"><Icon name="bolt" size={22} sw={2} /></span>
           <div className="min-w-[220px] flex-1">
             <p className="font-mono text-[10px] font-bold uppercase tracking-[0.2em] text-lime">Phase 3 · Intelligence</p>
             <h1 className="font-display text-[24px] font-bold leading-tight tracking-tight">AI Studio <span className="text-nighttx">— {active.label}</span></h1>

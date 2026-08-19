@@ -50,8 +50,8 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
       label: 'Overview',
       items: [
         { v: 'dashboard', icon: 'dash', label: 'Dashboard' },
-        { v: 'inbox', icon: 'inbox', label: 'Inbox', badge: unread, badgeColor: '#ff5ca8' },
-        { v: 'tasks', icon: 'checksq', label: 'Tasks', badge: due, badgeColor: '#ffd954' },
+        { v: 'inbox', icon: 'inbox', label: 'Inbox', badge: unread, badgeColor: '#e2618f' },
+        { v: 'tasks', icon: 'checksq', label: 'Tasks', badge: due, badgeColor: '#b26e14' },
       ],
     },
     {
@@ -64,7 +64,7 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
     {
       label: 'Marketing',
       items: [
-        { v: 'calendar', icon: 'calendar', label: 'Calendar', badge: pending, badgeColor: '#9db8ff' },
+        { v: 'calendar', icon: 'calendar', label: 'Calendar', badge: pending, badgeColor: '#3b6fd4' },
         { v: 'campaigns', icon: 'mail', label: 'Campaigns' },
         { v: 'marketing', icon: 'layout', label: 'Forms & Pages' },
       ],
@@ -105,13 +105,13 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
         <Logo />
 
         <button onClick={() => { a.nav('settings'); onClose(); }}
-          className="group mx-3 mb-3 flex items-center gap-2.5 rounded-lg border-2 border-nightline bg-night2 px-2.5 py-2.5 text-left shadow-[3px_3px_0_0_#c8f169] transition-all hover:border-lime/60">
-          <div className="relative grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-nightline bg-lime/15 font-mono text-[10px] font-bold text-lime">
+          className="group mx-3 mb-3 flex items-center gap-2.5 rounded-lg border border-nightline bg-night2/70 px-2.5 py-2.5 text-left transition-all hover:border-moss/50">
+          <div className="relative grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-moss/22 font-mono text-[10px] font-bold text-lime">
             E&O
             <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-night bg-lime" />
           </div>
           <div className="min-w-0 flex-1 leading-tight">
-            <p className="truncate text-xs font-bold text-card">Ember & Oak Roastery</p>
+            <p className="truncate text-xs font-semibold text-white">Ember & Oak Roastery</p>
             <p className="mt-0.5 flex items-center gap-1 font-mono text-[9px] uppercase tracking-wider text-nighttx">
               <span className="live-dot h-1.5 w-1.5 rounded-full bg-lime" /> all synced
             </p>
@@ -131,20 +131,21 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
                 return (
                   <button key={it.v} onClick={() => { a.nav(it.v); onClose(); }}
                     className={cx(
-                      'group mb-1 flex w-full items-center gap-2 rounded-lg border-[1.5px] py-[6px] pl-2 pr-2.5 text-[13px] font-bold transition-all duration-150',
+                      'group relative mb-0.5 flex w-full items-center gap-2.5 rounded-lg py-[7px] pl-2.5 pr-2.5 text-[13px] font-semibold transition-all duration-150',
                       active
-                        ? 'border-ink bg-lime text-ink shadow-[2px_2px_0_0_#ff5ca8]'
-                        : 'border-transparent text-nighttx hover:border-nightline hover:bg-night2 hover:text-card',
+                        ? 'bg-night2 text-white'
+                        : 'text-nighttx hover:bg-night2/60 hover:text-white/90',
                     )}>
+                    <span className={cx('absolute left-0 top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-r-full bg-lime transition-all',
+                      active ? 'opacity-100' : 'opacity-0 group-hover:opacity-30')} />
                     <span className={cx('grid h-[26px] w-[26px] shrink-0 place-items-center rounded-[7px] transition-all duration-150',
-                      active ? 'text-ink' : 'text-nighttx group-hover:text-lime')}>
-                      <Icon name={it.icon} size={15} sw={active ? 2.2 : 1.8} />
+                      active ? 'bg-moss/25 text-lime' : 'text-nighttx group-hover:text-white/80')}>
+                      <Icon name={it.icon} size={15} sw={active ? 2 : 1.8} />
                     </span>
                     <span className="flex-1 text-left">{it.label}</span>
                     {it.badge ? (
-                      <span className={cx('tnum rounded-md border px-1.5 py-[3px] font-mono text-[9.5px] font-bold leading-none',
-                        active ? 'border-ink bg-card text-ink' : 'border-ink/70 text-ink')}
-                        style={active ? undefined : { background: it.badgeColor }}>
+                      <span className="tnum rounded-full px-1.5 py-[3px] font-mono text-[9.5px] font-bold leading-none text-white"
+                        style={{ background: it.badgeColor }}>
                         {it.badge}
                       </span>
                     ) : null}
@@ -163,18 +164,18 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
           </div>
         </nav>
 
-        <div className="mx-3 mb-2 rounded-lg border-2 border-nightline bg-night2 p-3">
+        <div className="mx-3 mb-2 rounded-lg border border-nightline bg-night2/70 p-3">
           <div className="flex items-center justify-between">
             <p className="flex items-center gap-1.5 font-mono text-[9.5px] font-bold uppercase tracking-[0.16em] text-lime">
-              <Icon name="bolt" size={11} sw={2.2} /> Growth plan
+              <Icon name="bolt" size={11} sw={2} /> Growth plan
             </p>
-            <button onClick={() => { a.nav('settings'); onClose(); }} className="text-[10px] font-bold text-nighttx underline decoration-pink decoration-2 underline-offset-2 transition hover:text-card">Manage</button>
+            <button onClick={() => { a.nav('settings'); onClose(); }} className="text-[10px] font-semibold text-nighttx transition hover:text-white">Manage</button>
           </div>
-          <div className="mt-2.5 h-2 overflow-hidden rounded-sm border border-nightline bg-night">
-            <div className="h-full bg-lime transition-all duration-700" style={{ width: `${usedPct}%` }} />
+          <div className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-nightline">
+            <div className="h-full rounded-full bg-gradient-to-r from-moss to-lime transition-all duration-700" style={{ width: `${usedPct}%` }} />
           </div>
           <p className="tnum mt-2 font-mono text-[10px] font-semibold text-nighttx">
-            <span className="text-card">{kfmt(s.contacts.length * 1030)}</span> / 25K contacts · 10 users
+            <span className="text-white">{kfmt(s.contacts.length * 1030)}</span> / 25K contacts · 10 users
           </p>
         </div>
 
@@ -213,11 +214,11 @@ function SearchBox() {
         onFocus={() => setFocus(true)}
         onBlur={() => window.setTimeout(() => setFocus(false), 150)}
         placeholder="Search contacts, deals…"
-        className="h-9 w-full rounded-lg border-[1.5px] border-ink bg-card pl-9 pr-12 text-[13px] font-medium outline-none transition placeholder:text-faint focus:shadow-hard-sm"
+        className="h-9 w-full rounded-lg border border-line2 bg-card pl-9 pr-12 text-[13px] outline-none transition placeholder:text-faint focus:border-moss focus:shadow-[0_0_0_3px_rgb(11_122_85/0.12)]"
       />
       <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-line bg-paper px-1.5 py-0.5 font-mono text-[10px] text-faint">⌘K</span>
       {focus && results && (results.contacts.length > 0 || results.deals.length > 0) && (
-        <div className="absolute left-0 right-0 top-11 z-40 anim-pop overflow-hidden rounded-xl border-2 border-ink bg-card shadow-pop">
+        <div className="absolute left-0 right-0 top-11 z-40 anim-pop overflow-hidden rounded-xl border border-line bg-card shadow-pop">
           {results.contacts.length > 0 && (
             <div className="p-1.5">
               <p className="px-2 pb-1 pt-0.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.16em] text-faint">Contacts</p>
@@ -269,13 +270,13 @@ function CreateMenu() {
     <div className="relative">
       <button onClick={() => (can ? setOpen(o => !o) : a.toast('Viewer role is read-only — ask an Admin for Editor access', 'warning'))}
         title={can ? 'Create something new (N)' : 'Read-only role'}
-        className={cx('press-hard flex h-9 items-center gap-1.5 rounded-lg border-2 border-ink bg-lime px-3.5 text-[13px] font-bold text-ink shadow-hard', open && 'bg-butter', !can && 'cursor-not-allowed opacity-50')}>
-        <Icon name="plus" size={15} sw={2.6} /> Create
+        className={cx('press flex h-9 items-center gap-1.5 rounded-lg bg-moss px-3.5 text-[13px] font-semibold text-white shadow-btn transition-colors hover:bg-pine', open && 'bg-pine', !can && 'cursor-not-allowed opacity-50')}>
+        <Icon name="plus" size={15} sw={2.4} /> Create
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-11 z-40 w-48 anim-pop rounded-xl border-2 border-ink bg-card p-1.5 shadow-pop">
+          <div className="absolute right-0 top-11 z-40 w-48 anim-pop rounded-xl border border-line bg-card p-1.5 shadow-pop">
             {items.map(it => (
               <button key={it.label} onClick={() => { it.fn(); setOpen(false); }}
                 className="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium text-ink2 transition hover:bg-mint/70 hover:text-ink">
@@ -297,14 +298,14 @@ function Bell() {
   const kindIcon = { auto: 'bolt', approval: 'clock', import: 'download', system: 'bell' } as const;
   return (
     <div className="relative">
-      <button onClick={() => setOpen(o => !o)} className="relative grid h-9 w-9 place-items-center rounded-lg border-2 border-ink bg-card text-ink shadow-hard-sm transition-all hover:bg-butter active:translate-x-[2px] active:translate-y-[2px] active:shadow-none">
-        <Icon name="bell" size={16} sw={2} />
-        {unread > 0 && <span className="tnum absolute -right-1.5 -top-1.5 grid h-4.5 min-w-4.5 place-items-center rounded-md border-[1.5px] border-ink bg-pink px-1 font-mono text-[9px] font-bold text-ink">{unread}</span>}
+      <button onClick={() => setOpen(o => !o)} className="relative grid h-9 w-9 place-items-center rounded-lg border border-line bg-card text-ink2 transition-colors hover:border-line2 hover:text-ink">
+        <Icon name="bell" size={16} />
+        {unread > 0 && <span className="tnum absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-danger px-1 font-mono text-[9px] font-bold text-white ring-2 ring-paper">{unread}</span>}
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-11 z-40 w-[340px] anim-pop overflow-hidden rounded-xl border-2 border-ink bg-card shadow-pop">
+          <div className="absolute right-0 top-11 z-40 w-[340px] anim-pop overflow-hidden rounded-xl border border-line bg-card shadow-pop">
             <div className="flex items-center justify-between border-b border-line px-4 py-2.5">
               <p className="font-display text-[13.5px] font-bold text-ink">Notifications</p>
               <button onClick={() => a.ui({ notifs: s.notifs.map(n => ({ ...n, read: true })) })} className="text-[11px] font-semibold text-moss transition hover:text-pine">
@@ -340,9 +341,9 @@ function SyncTicker() {
   }, []);
   const syncing = sec <= 3;
   return (
-    <div className="hidden items-center gap-1.5 rounded-lg border-[1.5px] border-ink bg-card px-2.5 py-2 shadow-hard-sm xl:flex" title="Social APIs polled continuously — comments and DMs stream into the inbox">
-      <span className={cx('h-1.5 w-1.5 rounded-full', syncing ? 'live-dot bg-butter' : 'bg-teal')} />
-      <span className="font-mono text-[10px] font-bold text-ink2">{syncing ? 'syncing…' : `synced ${sec}s ago`}</span>
+    <div className="hidden items-center gap-1.5 rounded-lg border border-line bg-card px-2.5 py-2 xl:flex" title="Social APIs polled continuously — comments and DMs stream into the inbox">
+      <span className={cx('h-1.5 w-1.5 rounded-full', syncing ? 'live-dot bg-butter' : 'bg-lime')} />
+      <span className="font-mono text-[10px] font-semibold text-mut">{syncing ? 'syncing…' : `synced ${sec}s ago`}</span>
     </div>
   );
 }
@@ -363,7 +364,7 @@ function UserMenu() {
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-12 z-40 w-[264px] anim-pop overflow-hidden rounded-xl border-2 border-ink bg-card shadow-pop">
+          <div className="absolute right-0 top-12 z-40 w-[264px] anim-pop overflow-hidden rounded-xl border border-line bg-card shadow-pop">
             <div className="border-b border-line bg-paper/60 px-4 py-3.5">
               <div className="flex items-center gap-2.5">
                 <Avatar name={me.name} color={me.color} size={36} />
@@ -407,7 +408,7 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
   const can = useCanEdit();
   const t = TITLES[s.view];
   return (
-    <header className="sticky top-0 z-20 flex h-[62px] shrink-0 items-center gap-3 border-b-2 border-ink bg-paper/92 px-4 backdrop-blur-md md:px-6">
+    <header className="sticky top-0 z-20 flex h-[60px] shrink-0 items-center gap-3 border-b border-line bg-paper/90 px-4 backdrop-blur-md md:px-6">
       <IconBtn name="more" onClick={onMenu} className="md:hidden" title="Menu" />
       <div key={s.view} className="anim-rise min-w-0 flex-1">
         <p className="flex items-center gap-1.5 font-mono text-[8.5px] font-semibold uppercase tracking-[0.22em] text-moss">
@@ -420,7 +421,7 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
       {!can && <Pill color="#e86a17" tint="#ffe9d4" className="hidden md:inline-flex"><Icon name="eye" size={11} /> Read-only</Pill>}
       <CreateMenu />
       <Bell />
-      <div className="flex items-center gap-2 border-l-2 border-ink pl-3">
+      <div className="flex items-center gap-2 border-l border-line pl-3">
         <UserMenu />
       </div>
     </header>
