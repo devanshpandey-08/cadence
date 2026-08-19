@@ -7,7 +7,7 @@ import { useApp } from '../store';
 
 /* ---------- primitives ---------- */
 export const inputCls =
-  'w-full rounded-lg border border-line2 bg-card px-3 py-2 text-[13px] text-ink outline-none transition-all placeholder:text-faint hover:border-faint focus:border-moss focus:shadow-[0_0_0_3px_rgb(11_122_85/0.12)]';
+  'w-full rounded-lg border border-line2 bg-night2 px-3 py-2 text-[13px] text-ink outline-none transition-all placeholder:text-faint hover:border-faint focus:border-moss focus:shadow-[0_0_0_3px_rgb(224_145_60/0.16)]';
 
 export function Btn({
   children, onClick, variant = 'primary', size = 'md', className, disabled, type = 'button', title,
@@ -16,11 +16,11 @@ export function Btn({
   size?: 'sm' | 'md'; className?: string; disabled?: boolean; type?: 'button' | 'submit'; title?: string;
 }) {
   const v = {
-    primary: 'bg-moss text-white shadow-btn hover:bg-pine',
-    dark: 'bg-night text-white shadow-btn hover:bg-night2',
-    outline: 'border border-line2 bg-card text-ink shadow-hard-sm hover:border-moss/50 hover:text-pine',
+    primary: 'bg-moss text-night shadow-btn hover:bg-pine hover:text-ink',
+    dark: 'bg-night text-ink shadow-btn hover:bg-night2',
+    outline: 'border border-line2 bg-card text-ink shadow-hard-sm hover:border-moss/60 hover:text-moss',
     ghost: 'text-ink2 hover:bg-ink/5 hover:text-ink',
-    danger: 'bg-danger text-white shadow-btn hover:brightness-95',
+    danger: 'bg-danger text-night shadow-btn hover:brightness-110',
     dangerGhost: 'text-danger hover:bg-dangerbg',
   }[variant];
   return (
@@ -245,7 +245,7 @@ export function CountUp({ value, prefix = '', suffix = '', className }: { value:
   return <span className={cx('tnum', className)}>{prefix}{v.toLocaleString()}{suffix}</span>;
 }
 
-export function Spark({ data, color = '#0b7a55', h = 36, w = 130, className }: { data: number[]; color?: string; h?: number; w?: number; className?: string }) {
+export function Spark({ data, color = '#e0913c', h = 36, w = 130, className }: { data: number[]; color?: string; h?: number; w?: number; className?: string }) {
   const gid = useId().replace(/[:]/g, '');
   const min = Math.min(...data);
   const max = Math.max(...data);
@@ -334,7 +334,7 @@ export function SectionTitle({ children, right }: { children: ReactNode; right?:
 /* ---------- toast host ---------- */
 export function ToastHost() {
   const { s, a } = useApp();
-  const colors: Record<ToastMsg['kind'], string> = { success: '#0b7a55', info: '#3b6fd4', warning: '#b26e14' };
+  const colors: Record<ToastMsg['kind'], string> = { success: '#9dbb7e', info: '#7fa3c9', warning: '#d9b45c' };
   return (
     <div className="pointer-events-none fixed bottom-5 right-5 z-[70] flex w-[350px] flex-col gap-2">
       {s.toasts.map(t => (

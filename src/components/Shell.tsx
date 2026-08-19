@@ -158,10 +158,10 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
           ))}
           <div className="mx-1 mb-1 flex items-center justify-between rounded-lg border border-nightline/70 bg-night2/40 px-2.5 py-2">
             <span className="flex items-center gap-1.5 font-mono text-[9.5px] font-semibold text-nighttx">
-              <kbd className="rounded border border-nightline bg-night2 px-1 py-0.5 text-[9px] text-card/80">⌘K</kbd> commands
+              <kbd className="rounded border border-nightline bg-night2 px-1 py-0.5 text-[9px] text-ink/80">⌘K</kbd> commands
             </span>
             <span className="flex items-center gap-1 font-mono text-[9.5px] font-semibold text-nighttx">
-              <kbd className="rounded border border-nightline bg-night2 px-1 py-0.5 text-[9px] text-card/80">?</kbd> shortcuts
+              <kbd className="rounded border border-nightline bg-night2 px-1 py-0.5 text-[9px] text-ink/80">?</kbd> shortcuts
             </span>
           </div>
         </nav>
@@ -184,7 +184,7 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
         <button onClick={() => { a.nav('settings'); onClose(); }} className="group mx-3 mb-4 flex items-center gap-2.5 rounded-lg border border-transparent px-2 py-2 text-left transition-all hover:border-nightline hover:bg-night2/70">
           <Avatar name={(s.me ?? s.users[0]).name} color={(s.me ?? s.users[0]).color} size={30} status="online" />
           <div className="min-w-0 flex-1 leading-tight">
-            <p className="truncate text-xs font-semibold text-card">{(s.me ?? s.users[0]).name}</p>
+            <p className="truncate text-xs font-semibold text-ink">{(s.me ?? s.users[0]).name}</p>
             <p className="truncate text-[10px] text-nighttx">{ROLE_LABEL[(s.me ?? s.users[0]).role]} · {(s.me ?? s.users[0]).email}</p>
           </div>
           <Icon name="sliders" size={13} className="shrink-0 text-nighttx opacity-0 transition-opacity group-hover:opacity-100" />
@@ -216,7 +216,7 @@ function SearchBox() {
         onFocus={() => setFocus(true)}
         onBlur={() => window.setTimeout(() => setFocus(false), 150)}
         placeholder="Search contacts, deals…"
-        className="h-9 w-full rounded-lg border border-line2 bg-card pl-9 pr-12 text-[13px] outline-none transition placeholder:text-faint focus:border-moss focus:shadow-[0_0_0_3px_rgb(11_122_85/0.12)]"
+        className="h-9 w-full rounded-lg border border-line2 bg-card pl-9 pr-12 text-[13px] outline-none transition placeholder:text-faint focus:border-moss focus:shadow-[0_0_0_3px_rgb(224_145_60/0.16)]"
       />
       <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 rounded border border-line bg-paper px-1.5 py-0.5 font-mono text-[10px] text-faint">⌘K</span>
       {focus && results && (results.contacts.length > 0 || results.deals.length > 0) && (
