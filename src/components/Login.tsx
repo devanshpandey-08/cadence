@@ -132,7 +132,7 @@ export function Login() {
       {/* left — the product, already breathing */}
       <div className="relative hidden w-[54%] flex-col justify-between border-r border-nightline bg-night/70 p-10 lg:flex">
         <div className="flex items-center gap-3">
-          <span className="relative grid h-10 w-10 place-items-center rounded-lg bg-gradient-to-br from-ember to-copper shadow-hard">
+          <span className="relative grid h-10 w-10 place-items-center rounded-lg bg-gradient-to-br from-ember to-tang shadow-hard">
             <svg width="20" height="20" viewBox="0 0 32 32">
               <rect x="7" y="16" width="4" height="9" rx="1.5" fill="#191410" opacity="0.85" />
               <rect x="14" y="11" width="4" height="14" rx="1.5" fill="#191410" />

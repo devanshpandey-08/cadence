@@ -8,18 +8,23 @@ import { Avatar } from './ui';
 export const GMAP: Record<string, View> = {
   d: 'dashboard', i: 'inbox', t: 'tasks', c: 'contacts', p: 'deals', s: 'calendar', m: 'campaigns', f: 'marketing',
   a: 'ai', u: 'automations', l: 'listening', k: 'calls', r: 'ads', g: 'launch', q: 'testing', x: 'settings',
+  n: 'insights', e: 'experiments', b: 'attribution', w: 'conversations', y: 'web', o: 'seo',
 };
 
 const NAV_LABEL: Record<View, string> = {
   dashboard: 'Dashboard', inbox: 'Inbox', tasks: 'Tasks', contacts: 'Contacts', deals: 'Deal pipeline',
   calendar: 'Content calendar', campaigns: 'Email campaigns', marketing: 'Forms & pages',
   ai: 'AI Studio', automations: 'Automations', listening: 'Social listening', calls: 'Calls', ads: 'Ads Manager',
+  insights: 'Insights (BI)', experiments: 'A/B testing', attribution: 'Attribution',
+  conversations: 'SMS & WhatsApp', web: 'Web analytics', seo: 'SEO suite',
   launch: 'Launch console', testing: 'QA console', settings: 'Settings',
 };
 const NAV_ICON: Record<View, string> = {
   dashboard: 'dash', inbox: 'inbox', tasks: 'checksq', contacts: 'users', deals: 'kanban',
   calendar: 'calendar', campaigns: 'mail', marketing: 'layout',
   ai: 'bolt', automations: 'refresh', listening: 'globe', calls: 'phone', ads: 'trend',
+  insights: 'trend', experiments: 'layers', attribution: 'link',
+  conversations: 'message', web: 'globe', seo: 'search',
   launch: 'pulse', testing: 'shield', settings: 'sliders',
 };
 

@@ -2,6 +2,8 @@ export type View =
   | 'dashboard' | 'inbox' | 'tasks' | 'contacts' | 'deals'
   | 'calendar' | 'campaigns' | 'marketing'
   | 'ai' | 'automations' | 'listening' | 'calls' | 'ads'
+  | 'insights' | 'experiments' | 'attribution'
+  | 'conversations' | 'web' | 'seo'
   | 'testing' | 'launch' | 'settings';
 
 export type Platform =
