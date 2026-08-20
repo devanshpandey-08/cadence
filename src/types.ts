@@ -68,6 +68,20 @@ export interface Task {
   auto?: boolean;
 }
 
+/**
+ * A real media attachment.
+ * Images ≤300 KB are stored as data-URLs so they survive reload (demo stand-in
+ * for the S3 object store); larger files use session object-URLs. Videos are
+ * links (YouTube/TikTok/file URL) per the Phase 1 spec — we never host video.
+ */
+export interface MediaAttachment {
+  kind: 'image' | 'video' | 'carousel';
+  url?: string;            // single image / video link or preview
+  urls?: string[];         // carousel frames (max 4)
+  name?: string;
+  sessionOnly?: boolean;   // blob: URL — lives for this browser session only
+}
+
 export interface Post {
   id: string;
   text: string;
@@ -77,6 +91,7 @@ export interface Post {
   status: PostStatus;
   author: string;
   media: MediaType;
+  attachment?: MediaAttachment;
   firstComment?: string;
   campaign?: string;
   likes?: number;

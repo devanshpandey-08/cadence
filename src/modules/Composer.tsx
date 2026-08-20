@@ -1,31 +1,38 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../store';
 import { cx, Icon, PLATFORM_IDS, PLATFORMS, PlatformIcon, STATUSES, TODAY } from '../meta';
-import type { MediaType, Platform, PostStatus } from '../types';
+import type { MediaAttachment, MediaType, Platform, PostStatus } from '../types';
 import { Btn, IconBtn, inputCls, Modal, Pill } from '../components/ui';
+import { MediaUpload, videoEmbedSrc } from '../components/MediaUpload';
 
-function MediaBlock({ media, tall }: { media: MediaType; tall?: boolean }) {
+function MediaBlock({ media, att, tall }: { media: MediaType; att?: MediaAttachment | null; tall?: boolean }) {
   if (media === 'none') return null;
+  const embed = att?.kind === 'video' && att.url ? videoEmbedSrc(att.url) : null;
+  const img = att?.kind === 'image' && att.url ? att.url : att?.kind === 'carousel' && att.urls?.length ? att.urls[0] : null;
   return (
     <div className={cx('relative mt-2 flex items-center justify-center overflow-hidden rounded-lg',
       tall ? 'aspect-[3/4]' : 'aspect-[16/10]')}
       style={{ background: media === 'video' ? 'linear-gradient(140deg,#1d2a24,#0f1712 65%)' : 'linear-gradient(135deg,#2c1e15,#6b4226 55%,#a3703f)' }}>
-      <span className="grid h-10 w-10 place-items-center rounded-full bg-card/15 text-card/90 backdrop-blur-sm">
-        <Icon name={media === 'video' ? 'play' : 'image'} size={18} />
-      </span>
+      {embed && <iframe title="media" src={embed} className="absolute inset-0 h-full w-full" allowFullScreen />}
+      {img && <img src={img} alt="" className="absolute inset-0 h-full w-full object-cover" />}
+      {!embed && !img && (
+        <span className="grid h-10 w-10 place-items-center rounded-full bg-card/15 text-card/90 backdrop-blur-sm">
+          <Icon name={media === 'video' ? 'play' : 'image'} size={18} />
+        </span>
+      )}
       <span className="absolute bottom-2 right-2 rounded-md bg-night/60 px-1.5 py-0.5 font-mono text-[9px] font-semibold uppercase tracking-wider text-card/80">
         {media}
       </span>
       {media === 'carousel' && (
         <span className="absolute bottom-2.5 left-1/2 flex -translate-x-1/2 gap-1">
-          {[0, 1, 2].map(i => <span key={i} className={cx('h-1.5 rounded-full', i === 0 ? 'w-4 bg-card' : 'w-1.5 bg-card/45')} />)}
+          {Array.from({ length: att?.urls?.length ?? 3 }).slice(0, 4).map((_, i) => <span key={i} className={cx('h-1.5 rounded-full', i === 0 ? 'w-4 bg-card' : 'w-1.5 bg-card/45')} />)}
         </span>
       )}
     </div>
   );
 }
 
-function Preview({ p, text, media }: { p: Platform; text: string; media: MediaType }) {
+function Preview({ p, text, media, att }: { p: Platform; text: string; media: MediaType; att?: MediaAttachment | null }) {
   const body = text.trim() || 'Your post copy appears here…';
   const shared = 'mx-auto w-full max-w-[360px] rounded-xl border border-line bg-card p-3 text-left shadow-sm';
   switch (p) {
@@ -40,7 +47,7 @@ function Preview({ p, text, media }: { p: Platform; text: string; media: MediaTy
             </div>
           </div>
           <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-ink2">{body}</p>
-          <MediaBlock media={media} />
+          <MediaBlock media={media} att={att} />
           <div className="mt-2.5 flex items-center gap-4 border-t border-line pt-2 text-faint">
             <span className="flex items-center gap-1 text-[10px]"><Icon name="check" size={12} /> Like</span>
             <span className="flex items-center gap-1 text-[10px]"><Icon name="message" size={11} /> Comment</span>
@@ -58,7 +65,7 @@ function Preview({ p, text, media }: { p: Platform; text: string; media: MediaTy
             <p className="text-xs font-bold text-ink">emberandoak</p>
             <Icon name="more" size={14} className="ml-auto text-mut" />
           </div>
-          <MediaBlock media={media === 'none' ? 'image' : media} />
+          <MediaBlock media={media === 'none' ? 'image' : media} att={att} />
           <div className="mt-2 flex items-center gap-3 text-ink">
             <Icon name="heart" size={16} /><Icon name="message" size={15} /><Icon name="send" size={15} />
           </div>
@@ -73,7 +80,7 @@ function Preview({ p, text, media }: { p: Platform; text: string; media: MediaTy
             <div className="min-w-0">
               <p className="text-xs font-bold text-ink">Ember & Oak <span className="font-normal text-faint">@emberandoak · now</span></p>
               <p className="mt-0.5 whitespace-pre-line text-xs leading-relaxed text-ink2">{body}</p>
-              <MediaBlock media={media} />
+              <MediaBlock media={media} att={att} />
               <div className="mt-2 flex items-center gap-6 text-faint">
                 <span className="flex items-center gap-1 text-[10px]"><Icon name="message" size={12} /> 4</span>
                 <span className="flex items-center gap-1 text-[10px]"><Icon name="reply" size={12} /> 12</span>
@@ -94,7 +101,7 @@ function Preview({ p, text, media }: { p: Platform; text: string; media: MediaTy
             </div>
           </div>
           <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-ink2">{body}</p>
-          <MediaBlock media={media} />
+          <MediaBlock media={media} att={att} />
           <div className="mt-2 flex items-center justify-between border-t border-line pt-2 text-[10px] text-faint">
             <span className="flex items-center gap-1"><Icon name="heart" size={11} /> Like</span>
             <span>Comment</span><span>Share</span>
@@ -119,9 +126,11 @@ function Preview({ p, text, media }: { p: Platform; text: string; media: MediaTy
     case 'youtube':
       return (
         <div className={shared}>
-          <div className="relative flex aspect-video items-center justify-center rounded-lg" style={{ background: 'linear-gradient(140deg,#1d2a24,#0f1712)' }}>
-            <span className="grid h-10 w-10 place-items-center rounded-full bg-card/15 text-card"><Icon name="play" size={18} /></span>
-            <span className="absolute bottom-2 right-2 rounded bg-night/70 px-1 py-0.5 font-mono text-[9px] text-card">4:32</span>
+          <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-lg" style={{ background: 'linear-gradient(140deg,#1d2a24,#0f1712)' }}>
+            {att?.kind === 'video' && att.url && videoEmbedSrc(att.url)
+              ? <iframe title="video" src={videoEmbedSrc(att.url) ?? undefined} className="absolute inset-0 h-full w-full" allowFullScreen />
+              : <span className="grid h-10 w-10 place-items-center rounded-full bg-card/15 text-card"><Icon name="play" size={18} /></span>}
+            <span className="absolute bottom-2 right-2 rounded bg-night/70 px-1 py-0.5 font-mono text-[9px] text-card">{att?.kind === 'video' ? 'linked' : '4:32'}</span>
           </div>
           <p className="mt-2 line-clamp-2 text-xs font-bold leading-snug text-ink">{body.split('\n')[0]}</p>
           <p className="mt-1 text-[10px] text-faint">Ember & Oak Roastery · Premieres {TODAY}</p>
@@ -130,8 +139,12 @@ function Preview({ p, text, media }: { p: Platform; text: string; media: MediaTy
     case 'pinterest':
       return (
         <div className="mx-auto w-full max-w-[240px] overflow-hidden rounded-2xl border border-line bg-card shadow-sm">
-          <div className="flex aspect-[3/4] items-center justify-center" style={{ background: 'linear-gradient(150deg,#6b4226,#a3703f)' }}>
-            <Icon name="image" size={22} className="text-card/70" />
+          <div className="relative flex aspect-[3/4] items-center justify-center overflow-hidden" style={{ background: 'linear-gradient(150deg,#6b4226,#a3703f)' }}>
+            {att?.kind === 'image' && att.url
+              ? <img src={att.url} alt="" className="absolute inset-0 h-full w-full object-cover" />
+              : att?.kind === 'carousel' && att.urls?.length
+                ? <img src={att.urls[0]} alt="" className="absolute inset-0 h-full w-full object-cover" />
+                : <Icon name="image" size={22} className="text-card/70" />}
           </div>
           <p className="line-clamp-2 p-2.5 text-[11px] font-bold leading-snug text-ink">{body.split('\n')[0]}</p>
         </div>
@@ -147,7 +160,7 @@ function Preview({ p, text, media }: { p: Platform; text: string; media: MediaTy
             </div>
           </div>
           <p className="mt-2 whitespace-pre-line text-xs leading-relaxed text-ink2">{body}</p>
-          <MediaBlock media={media} />
+          <MediaBlock media={media} att={att} />
           <div className="mt-2 flex gap-2">
             <span className="rounded-md bg-steelbg px-2.5 py-1 text-[10px] font-bold text-steel">Call</span>
             <span className="rounded-md bg-mint px-2.5 py-1 text-[10px] font-bold text-pine">Book online</span>
@@ -164,7 +177,8 @@ export function Composer() {
 
   const [text, setText] = useState('');
   const [plats, setPlats] = useState<Platform[]>(['linkedin']);
-  const [media, setMedia] = useState<MediaType>('none');
+  const [attachment, setAttachment] = useState<MediaAttachment | null>(null);
+  const media: MediaType = attachment?.kind ?? 'none';
   const [igFormat, setIgFormat] = useState<'feed' | 'story' | 'reel'>('feed');
   const [firstComment, setFirstComment] = useState('');
   const [campaign, setCampaign] = useState('');
@@ -177,11 +191,11 @@ export function Composer() {
     if (!open) return;
     setErr('');
     if (editing) {
-      setText(editing.text); setPlats(editing.platforms); setMedia(editing.media);
+      setText(editing.text); setPlats(editing.platforms); setAttachment(editing.attachment ?? null);
       setFirstComment(editing.firstComment ?? ''); setCampaign(editing.campaign ?? '');
       setPdate(editing.date); setPtime(editing.time); setTab(editing.platforms[0]);
     } else {
-      setText(''); setPlats(['linkedin']); setMedia('none'); setFirstComment(''); setCampaign('');
+      setText(''); setPlats(['linkedin']); setAttachment(null); setFirstComment(''); setCampaign('');
       setPdate(date ?? TODAY); setPtime('12:00'); setTab('linkedin');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -198,11 +212,21 @@ export function Composer() {
   const validate = () => {
     if (!text.trim()) { setErr('Write something first — the preview needs copy.'); return false; }
     if (over) { setErr(`Over the ${limit}-character limit for ${PLATFORMS[plats.find(p => PLATFORMS[p].limit === limit) ?? 'x'].name}.`); return false; }
+    if (igSelected && igFormat === 'reel' && attachment?.kind !== 'video') {
+      setErr('Reels need a video — attach a YouTube/TikTok/.mp4 link in the Media section.');
+      return false;
+    }
+    if (tiktokSelected && media !== 'video') {
+      setErr('TikTok posts are video — attach a video link (or uncheck TikTok for this post).');
+      return false;
+    }
     return true;
   };
 
   const base = {
-    text: text.trim(), platforms: plats, media, firstComment: igSelected ? firstComment.trim() : undefined,
+    text: text.trim(), platforms: plats, media,
+    attachment: attachment ?? undefined,
+    firstComment: igSelected ? firstComment.trim() : undefined,
     campaign: campaign || undefined, date: pdate, time: ptime,
   };
 
@@ -257,21 +281,14 @@ export function Composer() {
             <textarea value={text} onChange={e => setText(e.target.value)} rows={5}
               placeholder="What's happening at the roastery? @mentions and line breaks work. Paste a link for video — we don't host video files."
               className={cx(inputCls, 'resize-none leading-relaxed')} />
-            <div className="mt-1 flex items-center justify-between">
-              <div className="flex items-center gap-1.5">
-                {(['none', 'image', 'video', 'carousel'] as MediaType[]).map(m => (
-                  <button key={m} onClick={() => setMedia(m)}
-                    className={cx('flex items-center gap-1 rounded-md border px-2 py-1 font-mono text-[10px] font-semibold uppercase tracking-wide transition',
-                      media === m ? 'border-moss bg-mint text-pine' : 'border-line bg-card text-mut hover:border-line2')}>
-                    <Icon name={m === 'none' ? 'x' : m === 'video' ? 'play' : 'image'} size={10} />{m}
-                  </button>
-                ))}
-              </div>
+            <div className="mt-1 flex items-center justify-end">
               <span className={cx('font-mono text-[10.5px] font-semibold', over ? 'text-danger' : 'text-faint')}>
                 {text.length} / {limit}
               </span>
             </div>
           </div>
+
+          <MediaUpload attachment={attachment} onChange={setAttachment} />
 
           {igSelected && (
             <div className="anim-rise space-y-2.5">
