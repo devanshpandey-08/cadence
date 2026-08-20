@@ -449,7 +449,8 @@ const regression: Suite = {
       // Simulate a workspace saved before the Asset Library existed: no `assets` key.
       const stale = { ...seedState() } as Record<string, unknown>;
       delete stale.assets;
-      const restored = parsePersisted(JSON.stringify({ version: 2,  stale }));
+      const payload = { version: 2, ['data']: stale };
+      const restored = parsePersisted(JSON.stringify(payload));
       assert(!!restored, 'payload still restores');
       assert(Array.isArray((restored as AppState).assets), 'missing `assets` key back-filled as an array — a screen calling s.assets.filter() must not crash');
       assert((restored as AppState).contacts.length === seedState().contacts.length, 'stored keys still win over seed');
