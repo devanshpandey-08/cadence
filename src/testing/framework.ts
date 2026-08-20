@@ -8,7 +8,8 @@ export type ReqTag =
   | 'core-crm' | 'pipeline' | 'tasks' | 'calendar' | 'publisher'
   | 'forms' | 'pages' | 'email' | 'approvals' | 'inbox' | 'scheduler' | 'roles'
   | 'security' | 'resilience' | 'scale' | 'api'
-  | 'integration' | 'e2e' | 'hardening' | 'chaos' | 'fuzz' | 'edge' | 'regression';
+  | 'integration' | 'e2e' | 'hardening' | 'chaos' | 'fuzz' | 'edge' | 'regression'
+  | 'smoke' | 'contracts' | 'persist' | 'purity' | 'flood';
 
 export interface TestResult {
   id: string;

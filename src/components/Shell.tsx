@@ -21,6 +21,12 @@ const TITLES: Record<View, { t: string; s: string }> = {
   listening: { t: 'Social Listening', s: 'Phase 2 — every mention, scored and streamed' },
   calls: { t: 'Calls', s: 'Phase 2 — VoIP dialing that logs itself to the CRM' },
   ads: { t: 'Ads Manager', s: 'Phase 3 — spend, pacing and ROAS across networks' },
+  insights: { t: 'Insights', s: 'Funnels, cohorts and leaderboards off the unified database' },
+  experiments: { t: 'A/B Testing', s: 'Two-proportion z-tests — ship only at 95% confidence' },
+  attribution: { t: 'Attribution', s: 'Multi-touch credit across five models' },
+  conversations: { t: 'SMS & WhatsApp', s: 'Meta Cloud API + Twilio, logged to the CRM timeline' },
+  web: { t: 'Web Analytics', s: 'First-party, cookieless traffic for your pages' },
+  seo: { t: 'SEO Suite', s: 'Audit, rank tracking and SERP preview' },
   launch: { t: 'Launch Console', s: 'Pre-flight to production: multi-tenant, billing, platform APIs' },
   testing: { t: 'QA Console', s: 'Automated suites, load benchmarks and live security probes' },
   settings: { t: 'Settings', s: 'Team, channels, plan and integrations' },
@@ -29,12 +35,16 @@ const TITLES: Record<View, { t: string; s: string }> = {
 function Logo() {
   return (
     <div className="flex items-center gap-2.5 px-4 pb-4 pt-5">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border-2 border-ink bg-lime shadow-[2px_2px_0_0_#ff5ca8]">
-        <Icon name="bolt" size={18} sw={2.2} className="text-ink" />
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-ember to-tang shadow-hard">
+        <svg width="18" height="18" viewBox="0 0 32 32">
+          <rect x="7" y="16" width="4" height="9" rx="1.5" fill="#191410" opacity="0.85" />
+          <rect x="14" y="11" width="4" height="14" rx="1.5" fill="#191410" />
+          <rect x="21" y="6" width="4" height="19" rx="1.5" fill="#191410" opacity="0.85" />
+        </svg>
       </span>
       <div className="leading-none">
-        <p className="font-display text-[17px] tracking-tight text-card">CADENCE</p>
-        <p className="mt-1 font-mono text-[8.5px] font-bold uppercase tracking-[0.26em] text-nighttx">social crm</p>
+        <p className="font-display text-[17px] font-bold tracking-tight text-ink">Cadence</p>
+        <p className="mt-1 font-mono text-[8.5px] font-medium uppercase tracking-[0.26em] text-nighttx">social crm</p>
       </div>
     </div>
   );
@@ -83,6 +93,22 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
       items: [
         { v: 'automations', icon: 'refresh', label: 'Automations' },
         { v: 'calls', icon: 'phone', label: 'Calls' },
+      ],
+    },
+    {
+      label: 'Insights · P2',
+      items: [
+        { v: 'insights', icon: 'trend', label: 'Insights (BI)' },
+        { v: 'attribution', icon: 'link', label: 'Attribution' },
+        { v: 'experiments', icon: 'layers', label: 'A/B Testing' },
+      ],
+    },
+    {
+      label: 'Reach · P2',
+      items: [
+        { v: 'conversations', icon: 'message', label: 'SMS & WhatsApp' },
+        { v: 'web', icon: 'globe', label: 'Web Analytics' },
+        { v: 'seo', icon: 'search', label: 'SEO Suite' },
       ],
     },
     {
@@ -402,6 +428,8 @@ const GROUP_OF: Record<View, string> = {
   calendar: 'Marketing', campaigns: 'Marketing', marketing: 'Marketing',
   ai: 'Intelligence', listening: 'Intelligence', ads: 'Intelligence',
   automations: 'Growth', calls: 'Growth',
+  insights: 'Insights', experiments: 'Insights', attribution: 'Insights',
+  conversations: 'Reach', web: 'Reach', seo: 'Reach',
   launch: 'Workspace', testing: 'Workspace', settings: 'Workspace',
 };
 
