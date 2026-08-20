@@ -133,6 +133,12 @@ export function seedState(): AppState {
       { id: 'co7', name: 'The Grain House', domain: 'grainhouse.com' },
       { id: 'co8', name: 'Fable Books & Brew', domain: 'fablebrew.com' },
     ],
+    assets: [
+      { id: 'as1', name: 'latte-art-pour.jpg', url: 'https://image.qwenlm.ai/generated-images/8194e1d9-b9ac-46fd-b453-6e9877871f0d/_result.png', size: 214000, kind: 'image' as const, tag: 'product', createdAt: d(0) },
+      { id: 'as2', name: 'spring-blend-bag.jpg', url: 'https://image.qwenlm.ai/generated-images/f691d95f-2bde-44ef-b4bb-47d2755d7a17/_result.png', size: 188000, kind: 'image' as const, tag: 'product', createdAt: d(0) },
+      { id: 'as3', name: 'roastery-interior.jpg', url: 'https://image.qwenlm.ai/generated-images/cb4621f4-68dc-4928-b3b0-7e9d22a3d99a/_result.png', size: 262000, kind: 'image' as const, tag: 'brand', createdAt: d(0) },
+      { id: 'as4', name: 'cold-brew-bottle.jpg', url: 'https://image.qwenlm.ai/generated-images/449620dc-141a-439f-9618-6f0244f01f40/_result.png', size: 154000, kind: 'image' as const, tag: 'product', createdAt: d(0) },
+    ],
     deals: [
       { id: 'd1', name: 'Café Astra — annual wholesale', contactId: 'c1', value: 48000, stage: 'negotiation', owner: 'Maya Chen', close: d(18), created: d(-30), notes: [{ id: uid(), text: 'Legal reviewing the MSAA. Ingrid pushing for 60-day terms.', at: d(-2), by: 'Maya Chen' }] },
       { id: 'd2', name: 'Hotel Verdant minibar program', contactId: 'c2', value: 32000, stage: 'proposal', owner: 'Maya Chen', close: d(10), created: d(-12), notes: [{ id: uid(), text: 'Wants single-serve pouches with hotel sleeve branding.', at: d(-4), by: 'Maya Chen' }] },

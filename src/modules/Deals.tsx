@@ -4,6 +4,19 @@ import { cx, fmtDate, Icon, isoOf, money, relTime, stageMeta, STAGES, TODAY, uid
 import type { Deal, Stage } from '../types';
 import { Avatar, Btn, Card, Drawer, Field, IconBtn, inputCls, Modal, Pill, Seg } from '../components/ui';
 
+export const LOSS_REASONS = ['Price / budget', 'Went with competitor', 'Timing — not now', 'Feature gap', 'No decision made', 'Ghosted'];
+
+/** Deterministic win probability — same model the AI surface quotes. */
+export function winProb(d: Deal): number {
+  const base: Record<Stage, number> = { lead: 10, qualified: 30, proposal: 55, negotiation: 75, won: 100, lost: 0 };
+  let p = base[d.stage];
+  if (d.value < 20000) p += 5;            // smaller deals close easier
+  const age = Math.round((new Date(TODAY + 'T00:00:00').getTime() - new Date(d.created + 'T00:00:00').getTime()) / 864e5);
+  if (age > 30 && !['won', 'lost'].includes(d.stage)) p -= 10; // stale deals decay
+  return Math.min(97, Math.max(2, p));
+}
+const probTone = (p: number) => p >= 70 ? { c: '#2e9e4f', t: '#e0f6e4' } : p >= 40 ? { c: '#e86a17', t: '#ffe9d4' } : { c: '#3d6bff', t: '#e3eaff' };
+
 function AddDealModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { s, a } = useApp();
   const [f, setF] = useState({ name: '', contactId: '', value: '5000', stage: 'lead' as Stage, close: isoOf(new Date(Date.now() + 14 * 864e5)), owner: 'Maya Chen' });
@@ -52,10 +65,21 @@ function DealDrawer() {
   const { s, a } = useApp();
   const d = s.deals.find(x => x.id === s.dealId) ?? null;
   const [note, setNote] = useState('');
+  const [askLoss, setAskLoss] = useState(false);
+  const [lossPick, setLossPick] = useState(LOSS_REASONS[0]);
+  const [newItem, setNewItem] = useState({ sku: '', qty: '1', price: '' });
   if (!d) return null;
   const c = s.contacts.find(x => x.id === d.contactId);
   const sm = stageMeta(d.stage);
   const close = () => a.ui({ dealId: null });
+  const prob = winProb(d);
+  const pt = probTone(prob);
+
+  const tryStage = (st: Stage) => {
+    if (st === 'lost' && !d.lossReason) { setLossPick(LOSS_REASONS[0]); setAskLoss(true); return; }
+    a.moveDeal(d.id, st);
+  };
+  const itemsTotal = (d.items ?? []).reduce((n, i) => n + i.qty * i.price, 0);
 
   return (
     <Drawer open onClose={close}>
@@ -67,17 +91,20 @@ function DealDrawer() {
           </div>
           <IconBtn name="x" onClick={close} title="Close" />
         </div>
-        <div className="mt-3 flex items-center gap-2">
+        <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="font-display text-[24px] font-bold tracking-tight text-ink">{money(d.value)}</span>
           <Pill color={sm.color} tint={sm.tint} dot>{sm.label}</Pill>
+          <Pill color={pt.c} tint={pt.t} className="tnum" dot>{prob}% likely to win</Pill>
           {d.close < TODAY && !['won', 'lost'].includes(d.stage) && <Pill color="#c2483b" tint="#f8e6e2">past due</Pill>}
+          {d.stage === 'lost' && d.lossReason && <Pill color="#c2483b" tint="#f8e6e2">lost · {d.lossReason}</Pill>}
+          {d.stage === 'won' && d.winReason && <Pill color="#2e9e4f" tint="#e0f6e4">won · {d.winReason}</Pill>}
         </div>
         {/* stage stepper */}
         <div className="mt-4">
-          <p className="mb-1.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-mut">Move stage — automation fires on Proposal</p>
+          <p className="mb-1.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-mut">Move stage — automation fires on Proposal · lost requires a reason</p>
           <div className="flex gap-1">
             {STAGES.map(st => (
-              <button key={st.id} onClick={() => a.moveDeal(d.id, st.id)} title={st.label}
+              <button key={st.id} onClick={() => tryStage(st.id)} title={st.label}
                 className={cx('h-8 flex-1 rounded-md border text-[10px] font-bold transition-all active:scale-95',
                   d.stage === st.id ? 'text-card shadow-sm' : 'border-line bg-card text-mut hover:border-line2 hover:text-ink2')}
                 style={d.stage === st.id ? { background: st.color, borderColor: st.color } : undefined}>
@@ -156,8 +183,27 @@ export function Deals() {
     if (s.create === 'deal') { setAddOpen(true); a.ui({ create: null }); }
   }, [s.create, a]);
 
+  const [lostAsk, setLostAsk] = useState<string | null>(null);
+  const [lostReason, setLostReason] = useState(LOSS_REASONS[0]);
+
+  /* Closing lost requires a reason — feeds churn analytics & win-back flows. */
+  const requestMove = (id: string, stage: Stage) => {
+    const d = s.deals.find(x => x.id === id);
+    if (!d) return;
+    if (stage === 'lost' && !d.lossReason) { setLostReason(LOSS_REASONS[0]); setLostAsk(id); return; }
+    a.moveDeal(id, stage);
+  };
+  const confirmLost = () => {
+    if (!lostAsk) return;
+    a.patchDeal(lostAsk, { lossReason: lostReason });
+    a.moveDeal(lostAsk, 'lost');
+    a.toast(`Closed lost — reason "${lostReason}" recorded for analytics`, 'warning');
+    setLostAsk(null);
+  };
+
   const open = s.deals.filter(d => !['won', 'lost'].includes(d.stage));
   const pipeline = open.reduce((x, d) => x + d.value, 0);
+  const weighted = open.reduce((x, d) => x + d.value * (winProb(d) / 100), 0);
   const wonSum = s.deals.filter(d => d.stage === 'won').reduce((x, d) => x + d.value, 0);
 
   const byStage = useMemo(() => {
@@ -185,6 +231,11 @@ export function Deals() {
             <p className="font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-mut">Open deals</p>
             <p className="font-display text-[21px] font-bold leading-tight tracking-tight text-ink">{open.length}</p>
           </div>
+          <div className="hidden h-8 w-px bg-line md:block" />
+          <div className="hidden md:block" title="Σ deal value × win probability — the forecast your pipeline actually deserves">
+            <p className="font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-mut">Weighted forecast</p>
+            <p className="font-display text-[21px] font-bold leading-tight tracking-tight text-steel">{money(Math.round(weighted))}</p>
+          </div>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <Seg options={[{ id: 'board', label: 'Board' }, { id: 'list', label: 'List' }]} value={view} onChange={setView} />
@@ -205,7 +256,7 @@ export function Deals() {
                   onDrop={e => {
                     e.preventDefault();
                     const id = e.dataTransfer.getData('text/deal') || dragId;
-                    if (id) a.moveDeal(id, st.id);
+                    if (id) requestMove(id, st.id);
                     setOverCol(null); setDragId(null);
                   }}
                   className={cx('flex w-[248px] shrink-0 flex-col rounded-xl border bg-paper/70 transition-all',
@@ -273,7 +324,7 @@ export function Deals() {
                         {c && <span className="flex items-center gap-1.5 text-xs text-ink2"><Avatar name={c.name} size={20} />{c.name}</span>}
                       </td>
                       <td className="px-4 py-2.5" onClick={e => e.stopPropagation()}>
-                        <select value={d.stage} onChange={e => a.moveDeal(d.id, e.target.value as Stage)}
+                        <select value={d.stage} onChange={e => requestMove(d.id, e.target.value as Stage)}
                           className="rounded-full border-0 py-1 pl-2.5 pr-7 text-[11px] font-semibold outline-none ring-1 ring-inset ring-transparent transition focus:ring-moss"
                           style={{ color: sm.color, background: sm.tint }}>
                           {STAGES.map(st => <option key={st.id} value={st.id}>{st.label}</option>)}
@@ -297,6 +348,18 @@ export function Deals() {
       </p>
 
       <AddDealModal open={addOpen} onClose={() => setAddOpen(false)} />
+      <Modal open={!!lostAsk} onClose={() => setLostAsk(null)} title="Close as lost" sub="A reason is required — it powers churn analytics and win-back campaigns." w="max-w-sm"
+        footer={<><Btn variant="ghost" onClick={() => setLostAsk(null)}>Cancel</Btn><Btn variant="danger" onClick={confirmLost}><Icon name="x" size={13} sw={2.4} /> Close lost</Btn></>}>
+        <div className="grid grid-cols-2 gap-2">
+          {LOSS_REASONS.map(r => (
+            <button key={r} onClick={() => setLostReason(r)}
+              className={cx('rounded-lg border px-3 py-2.5 text-left text-xs font-semibold transition active:scale-[0.97]',
+                lostReason === r ? 'border-danger bg-dangerbg text-danger' : 'border-line bg-card text-ink2 hover:border-line2')}>
+              {r}
+            </button>
+          ))}
+        </div>
+      </Modal>
       <DealDrawer />
     </div>
   );

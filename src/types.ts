@@ -24,6 +24,9 @@ export interface Activity {
   at: string;
 }
 
+/** Communication channel opt-ins (GDPR/CCPA-aware). */
+export interface ChannelPrefs { email: boolean; sms: boolean; phone: boolean }
+
 export interface Contact {
   id: string;
   name: string;
@@ -38,11 +41,30 @@ export interface Contact {
   lastActivity: string;
   timeline: Activity[];
   fromSocial?: boolean;
+  score?: number;                 // 0–100 engagement score
+  prefs?: ChannelPrefs;           // per-channel consent
+  gdprConsentAt?: string;         // consent audit trail
+  anonymized?: boolean;           // GDPR right-to-be-forgotten applied
+}
+
+/** A reusable media asset (the S3-backed library in production). */
+export interface Asset {
+  id: string;
+  name: string;
+  url: string;
+  size: number;
+  kind: 'image';
+  tag?: string;
+  createdAt: string;
+  sessionOnly?: boolean;
 }
 
 export interface Company { id: string; name: string; domain: string; }
 
 export interface Note { id: string; text: string; at: string; by: string; }
+
+/** A quote/proposal line item. */
+export interface LineItem { sku: string; qty: number; price: number }
 
 export interface Deal {
   id: string;
@@ -54,6 +76,10 @@ export interface Deal {
   close: string;
   notes: Note[];
   created: string;
+  lossReason?: string;            // required on close-lost
+  winReason?: string;
+  items?: LineItem[];             // products / line items
+  quoteSent?: boolean;
 }
 
 export interface Task {
@@ -92,6 +118,7 @@ export interface Post {
   author: string;
   media: MediaType;
   attachment?: MediaAttachment;
+  perPlatform?: Partial<Record<Platform, string>>;
   firstComment?: string;
   campaign?: string;
   likes?: number;
@@ -169,6 +196,7 @@ export interface AppState {
   create: CreateSignal;
   contacts: Contact[];
   companies: Company[];
+  assets: Asset[];
   deals: Deal[];
   tasks: Task[];
   posts: Post[];

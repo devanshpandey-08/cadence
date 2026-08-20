@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp, useCanEdit } from '../store';
 import { toCsv } from '../services/csv';
 import { TAG_OPTIONS } from '../data';
-import { addDays, cx, Icon, isoOf, money, relTime, uid } from '../meta';
+import { addDays, cx, Icon, isoOf, money, relTime, TODAY, uid } from '../meta';
 import type { Contact, Source } from '../types';
 import { Avatar, Btn, Card, Drawer, Field, IconBtn, inputCls, Modal, Pill, Tag } from '../components/ui';
 
@@ -15,6 +15,23 @@ const SOURCE_META: Record<Source, { color: string; tint: string }> = {
   Webinar: { color: '#a96f14', tint: '#f7ecd6' },
   Chat: { color: '#2f8f83', tint: '#e1f0ee' },
 };
+
+/** Deterministic engagement score (0–100) — the same model AI Studio surfaces. */
+export function contactScore(c: Contact, deals: { contactId: string; stage: string; value: number }[], today: string): number {
+  let sc = 20;
+  if (c.source === 'Form') sc += 15;
+  if (c.source === 'Social') sc += 10;
+  const won = deals.filter(d => d.contactId === c.id && d.stage === 'won');
+  sc += Math.min(25, won.length * 15);
+  sc += Math.min(15, deals.filter(d => d.contactId === c.id && !['won', 'lost'].includes(d.stage)).length * 8);
+  const days = Math.round((new Date(today + 'T00:00:00').getTime() - new Date(c.lastActivity + 'T00:00:00').getTime()) / 864e5);
+  sc += Math.max(0, 20 - days);
+  if (c.tags.includes('vip')) sc += 10;
+  return Math.min(100, Math.max(0, Math.round(sc)));
+}
+const BAND = (sc: number) => sc >= 70 ? { label: 'Hot', color: '#e5484d', tint: '#ffe0df' } : sc >= 45 ? { label: 'Warm', color: '#e86a17', tint: '#ffe9d4' } : { label: 'Nurture', color: '#3d6bff', tint: '#e3eaff' };
+
+type SmartView = 'all' | 'hot' | 'stalled' | 'new' | 'vip';
 
 const IMPORTED: Array<Omit<Contact, 'id' | 'createdAt' | 'lastActivity' | 'timeline'>> = [
   { name: 'Harriet Boone', email: 'harriet@cascadeprovisions.com', company: 'Cascade Provisions', title: 'Purchasing Lead', source: 'Import', tags: ['wholesale'], owner: 'Maya Chen', phone: '+1 (503) 555-0195' },
@@ -170,6 +187,7 @@ function ContactDrawer() {
   const [tagIn, setTagIn] = useState('');
   const [noteOpen, setNoteOpen] = useState(false);
   const [note, setNote] = useState('');
+  const [gdprOpen, setGdprOpen] = useState(false);
   if (!c) return null;
 
   const deals = s.deals.filter(d => d.contactId === c.id);
@@ -229,6 +247,58 @@ function ContactDrawer() {
             </div>
           </div>
         )}
+
+        {/* communication preferences + GDPR */}
+        <div className="mt-4 rounded-lg border border-line bg-card p-3">
+          <div className="flex items-center justify-between">
+            <p className="font-mono text-[9.5px] font-semibold uppercase tracking-[0.16em] text-mut">Consent · GDPR / CCPA</p>
+            <span className="font-mono text-[9px] text-faint">{c.gdprConsentAt ? `consented ${c.gdprConsentAt}` : 'no audit trail'}</span>
+          </div>
+          <div className="mt-2.5 flex flex-wrap gap-x-5 gap-y-2">
+            {([['email', 'Email'], ['sms', 'SMS'], ['phone', 'Phone']] as const).map(([k, label]) => {
+              const prefs = c.prefs ?? { email: true, sms: true, phone: true };
+              return (
+                <label key={k} className="flex cursor-pointer items-center gap-2 text-[11.5px] font-medium text-ink2">
+                  <input type="checkbox" checked={prefs[k]}
+                    onChange={e => {
+                      a.patchContact(c.id, { prefs: { ...prefs, [k]: e.target.checked }, gdprConsentAt: isoOf(new Date()) });
+                      a.toast(`${label} ${e.target.checked ? 'opted in' : 'opted out'} — suppression lists updated`, 'info');
+                    }}
+                    className="h-3.5 w-3.5 accent-[#0b7a55]" />
+                  {label}
+                </label>
+              );
+            })}
+          </div>
+          <div className="mt-3 flex gap-2 border-t border-line pt-2.5">
+            <Btn size="sm" variant="ghost" onClick={() => setGdprOpen(true)}><Icon name="shield" size={12} /> GDPR tools</Btn>
+            <span className="ml-auto font-mono text-[9px] text-faint">suppressed channels are skipped on every send</span>
+          </div>
+        </div>
+        {gdprOpen && (
+          <Modal open onClose={() => setGdprOpen(false)} title="GDPR tools" sub={`${c.name} · right to access, portability & erasure`} w="max-w-sm"
+            footer={<Btn variant="ghost" onClick={() => setGdprOpen(false)}>Close</Btn>}>
+            <div className="space-y-2">
+              <Btn variant="outline" className="w-full" onClick={() => {
+                const csv = toCsv(['field', 'value'], [['name', c.name], ['email', c.email], ['phone', c.phone ?? ''], ['company', c.company], ['tags', c.tags.join('|')]]);
+                const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+                const el = document.createElement('a'); el.href = url; el.download = `${c.name.replace(/\s+/g, '-').toLowerCase()}-data.csv`; el.click();
+                URL.revokeObjectURL(url);
+                a.toast('Data exported — right to portability fulfilled');
+                setGdprOpen(false);
+              }}><Icon name="download" size={13} /> Export all data</Btn>
+              <Btn variant="outline" className="w-full" onClick={() => {
+                a.patchContact(c.id, { name: 'Anonymized User', email: `anon-${c.id.slice(0, 6)}@erased.local`, phone: undefined, anonymized: true, tags: [], gdprConsentAt: isoOf(new Date()) });
+                a.logActivity(c.id, 'note', 'GDPR anonymization processed — PII scrubbed');
+                a.toast('Contact anonymized — PII scrubbed, record kept for audit', 'warning');
+                setGdprOpen(false); close();
+              }}><Icon name="eye" size={13} /> Anonymize (keep record)</Btn>
+              <Btn variant="danger" className="w-full" onClick={() => { a.removeContact(c.id); setGdprOpen(false); close(); }}>
+                <Icon name="trash" size={13} /> Erase completely
+              </Btn>
+            </div>
+          </Modal>
+        )}
       </div>
 
       <div className="space-y-5 px-5 py-4">
@@ -279,6 +349,10 @@ export function Contacts() {
   const [addOpen, setAddOpen] = useState(false);
   const can = useCanEdit();
   const [importOpen, setImportOpen] = useState(false);
+  const [view, setView] = useState<SmartView>('all');
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const [bulkTag, setBulkTag] = useState('');
+  const [gdprTarget, setGdprTarget] = useState<string | null>(null);
 
   useEffect(() => {
     if (s.create === 'contact') { setAddOpen(true); a.ui({ create: null }); }
@@ -290,13 +364,55 @@ export function Contacts() {
     return Array.from(counts.entries()).sort((x, y) => y[1] - x[1]).slice(0, 6);
   }, [s.contacts]);
 
+  const today = TODAY;
   const rows = useMemo(() => s.contacts.filter(c => {
     const t = q.trim().toLowerCase();
     if (t && !(c.name + c.company + c.email + c.title).toLowerCase().includes(t)) return false;
     if (src !== 'all' && c.source !== src) return false;
     if (tag && !c.tags.includes(tag)) return false;
+    if (c.anonymized) return false; // erased contacts never surface
+    if (view === 'hot' && contactScore(c, s.deals, today) < 70) return false;
+    if (view === 'vip' && !c.tags.includes('vip')) return false;
+    if (view === 'new') {
+      const days = Math.round((new Date(today + 'T00:00:00').getTime() - new Date(c.createdAt + 'T00:00:00').getTime()) / 864e5);
+      if (days > 7) return false;
+    }
+    if (view === 'stalled') {
+      const days = Math.round((new Date(today + 'T00:00:00').getTime() - new Date(c.lastActivity + 'T00:00:00').getTime()) / 864e5);
+      if (days < 14) return false;
+    }
     return true;
-  }), [s.contacts, q, src, tag]);
+  }), [s.contacts, q, src, tag, view, s.deals, today]);
+
+  /* ---------- bulk actions ---------- */
+  const toggleSel = (id: string) => setSel(prev => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const bulk = {
+    addTag: () => {
+      if (!bulkTag.trim()) return;
+      [...sel].forEach(id => { const c = s.contacts.find(x => x.id === id); if (c) a.patchContact(id, { tags: Array.from(new Set([...c.tags, bulkTag.trim()])) }); });
+      a.toast(`Tagged ${sel.size} contacts with "${bulkTag.trim()}"`);
+      setBulkTag(''); setSel(new Set());
+    },
+    assign: (owner: string) => {
+      [...sel].forEach(id => a.patchContact(id, { owner }));
+      a.toast(`Reassigned ${sel.size} contacts to ${owner}`);
+      setSel(new Set());
+    },
+    del: () => {
+      [...sel].forEach(id => a.removeContact(id));
+      a.toast(`Deleted ${sel.size} contacts`, 'warning');
+      setSel(new Set());
+    },
+    export: () => {
+      const list = s.contacts.filter(c => sel.has(c.id));
+      const csv = toCsv(['name', 'email', 'phone', 'company', 'title', 'source', 'tags', 'owner', 'created'],
+        list.map(c => [c.name, c.email, c.phone ?? '', c.company, c.title, c.source, c.tags.join('|'), c.owner, c.createdAt]));
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+      const el = document.createElement('a'); el.href = url; el.download = 'cadence-selection.csv'; el.click();
+      URL.revokeObjectURL(url);
+      a.toast(`Exported ${list.length} selected contacts`);
+    },
+  };
 
   const exportCsv = () => {
     const csv = toCsv(
@@ -310,8 +426,42 @@ export function Contacts() {
     a.toast(`Exported ${rows.length} contacts to CSV`);
   };
 
+  const VIEWS: { id: SmartView; label: string }[] = [
+    { id: 'all', label: 'All' }, { id: 'hot', label: '🔥 Hot' }, { id: 'new', label: 'New · 7d' }, { id: 'stalled', label: 'Stalled · 14d+' }, { id: 'vip', label: 'VIP' },
+  ];
+
   return (
     <div className="space-y-3.5">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {VIEWS.map(v => (
+          <button key={v.id} onClick={() => setView(v.id)}
+            className={cx('rounded-full border px-3 py-1.5 text-[11.5px] font-semibold transition-all active:scale-95',
+              view === v.id ? 'border-moss bg-moss text-night shadow-btn' : 'border-line bg-card text-mut hover:border-line2 hover:text-ink2')}>
+            {v.label}
+          </button>
+        ))}
+        <span className="ml-2 font-mono text-[10px] uppercase tracking-wider text-faint">saved segments</span>
+      </div>
+
+      {sel.size > 0 && (
+        <div className="anim-rise flex flex-wrap items-center gap-2 rounded-xl border border-moss/50 bg-mint/60 px-3.5 py-2.5">
+          <span className="font-mono text-[11.5px] font-bold text-pine">{sel.size} selected</span>
+          <div className="flex items-center gap-1.5">
+            <input value={bulkTag} onChange={e => setBulkTag(e.target.value)} placeholder="tag…"
+              className="h-7 w-24 rounded-md border border-line bg-card px-2 font-mono text-[10.5px] outline-none focus:border-moss" />
+            <Btn size="sm" variant="outline" onClick={bulk.addTag}><Icon name="tag" size={12} /> Tag</Btn>
+          </div>
+          <select onChange={e => { if (e.target.value) bulk.assign(e.target.value); e.target.value = ''; }} defaultValue=""
+            className="h-7 rounded-md border border-line bg-card px-2 text-[11px] font-medium outline-none">
+            <option value="" disabled>Assign to…</option>
+            {s.users.filter(u => u.role !== 'viewer').map(u => <option key={u.id}>{u.name}</option>)}
+          </select>
+          <Btn size="sm" variant="outline" onClick={bulk.export}><Icon name="download" size={12} /> Export</Btn>
+          <Btn size="sm" variant="dangerGhost" onClick={bulk.del}><Icon name="trash" size={12} /> Delete</Btn>
+          <button onClick={() => setSel(new Set())} className="ml-auto text-[11px] font-semibold text-mut transition hover:text-ink">Clear</button>
+        </div>
+      )}
+
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative">
           <Icon name="search" size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-faint" />
@@ -344,7 +494,14 @@ export function Contacts() {
           <table className="w-full min-w-[860px] border-collapse text-left">
             <thead>
               <tr className="border-b border-line bg-paper/70">
-                {['Contact', 'Company', 'Source', 'Tags', 'Deals', 'Last activity', 'Owner'].map(h => (
+                <th className="w-10 px-3 py-2.5">
+                  <button onClick={() => setSel(sel.size === rows.length ? new Set() : new Set(rows.map(c => c.id)))}
+                    className={cx('grid h-4 w-4 place-items-center rounded border transition', sel.size === rows.length && rows.length > 0 ? 'border-moss bg-moss text-night' : 'border-line2 bg-card')}
+                    title="Select all">
+                    {sel.size === rows.length && rows.length > 0 && <Icon name="check" size={10} sw={3.4} />}
+                  </button>
+                </th>
+                {['Contact', 'Score', 'Company', 'Source', 'Tags', 'Deals', 'Last activity', 'Owner'].map(h => (
                   <th key={h} className="px-4 py-2.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-mut">{h}</th>
                 ))}
               </tr>
@@ -354,7 +511,13 @@ export function Contacts() {
                 const deals = s.deals.filter(d => d.contactId === c.id);
                 return (
                   <tr key={c.id} onClick={() => a.ui({ contactId: c.id })}
-                    className="cursor-pointer border-b border-line/70 transition last:border-0 hover:bg-mint/35">
+                    className={cx('cursor-pointer border-b border-line/70 transition last:border-0 hover:bg-mint/35', sel.has(c.id) && 'bg-mint/40')}>
+                    <td className="px-3 py-2.5" onClick={e => e.stopPropagation()}>
+                      <button onClick={() => toggleSel(c.id)}
+                        className={cx('grid h-4 w-4 place-items-center rounded border transition', sel.has(c.id) ? 'border-moss bg-moss text-night' : 'border-line2 bg-card hover:border-moss')}>
+                        {sel.has(c.id) && <Icon name="check" size={10} sw={3.4} />}
+                      </button>
+                    </td>
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2.5">
                         <Avatar name={c.name} size={30} />
@@ -366,6 +529,13 @@ export function Contacts() {
                           <p className="text-[10.5px] text-faint">{c.email}</p>
                         </div>
                       </div>
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {(() => {
+                        const sc = contactScore(c, s.deals, today);
+                        const b = BAND(sc);
+                        return <Pill color={b.color} tint={b.tint} className="tnum">{sc} · {b.label}</Pill>;
+                      })()}
                     </td>
                     <td className="px-4 py-2.5">
                       <p className="text-xs font-medium text-ink2">{c.company}</p>
@@ -389,7 +559,7 @@ export function Contacts() {
                 );
               })}
               {rows.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-10 text-center text-xs text-mut">No contacts match these filters.</td></tr>
+                <tr><td colSpan={9} className="px-4 py-10 text-center text-xs text-mut">No contacts match these filters.</td></tr>
               )}
             </tbody>
           </table>

@@ -5,6 +5,16 @@ import type { MediaAttachment, MediaType, Platform, PostStatus } from '../types'
 import { Btn, IconBtn, inputCls, Modal, Pill } from '../components/ui';
 import { MediaUpload, videoEmbedSrc } from '../components/MediaUpload';
 
+/** Deterministic hashtag suggestions from the copy's topic words. */
+function suggestedTags(text: string): string[] {
+  const stop = new Set(['the', 'a', 'an', 'and', 'or', 'of', 'to', 'in', 'on', 'for', 'with', 'is', 'are', 'was', 'our', 'your', 'we', 'you', 'this', 'that', 'at', 'by']);
+  const words = text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/)
+    .filter(w => w.length > 3 && !stop.has(w));
+  const uniq = Array.from(new Set(words)).slice(0, 3).map(w => `#${w}`);
+  const evergreen = ['#coffee', '#specialtycoffee', '#roastery'];
+  return Array.from(new Set([...uniq, ...evergreen.filter(e => !uniq.includes(e))])).slice(0, 5);
+}
+
 function MediaBlock({ media, att, tall }: { media: MediaType; att?: MediaAttachment | null; tall?: boolean }) {
   if (media === 'none') return null;
   const embed = att?.kind === 'video' && att.url ? videoEmbedSrc(att.url) : null;
@@ -180,6 +190,10 @@ export function Composer() {
   const [attachment, setAttachment] = useState<MediaAttachment | null>(null);
   const media: MediaType = attachment?.kind ?? 'none';
   const [igFormat, setIgFormat] = useState<'feed' | 'story' | 'reel'>('feed');
+  const [overrides, setOverrides] = useState<Partial<Record<Platform, string>>>({});
+  const [showOverrides, setShowOverrides] = useState(false);
+  const [utm, setUtm] = useState(true);
+  const [shorten, setShorten] = useState(true);
   const [firstComment, setFirstComment] = useState('');
   const [campaign, setCampaign] = useState('');
   const [pdate, setPdate] = useState(TODAY);
@@ -198,6 +212,7 @@ export function Composer() {
       setText(''); setPlats(['linkedin']); setAttachment(null); setFirstComment(''); setCampaign('');
       setPdate(date ?? TODAY); setPtime('12:00'); setTab('linkedin');
     }
+    setOverrides(editing?.perPlatform ?? {}); setShowOverrides(false); setUtm(true); setShorten(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, postId, date]);
 
@@ -223,9 +238,29 @@ export function Composer() {
     return true;
   };
 
+  /* link tooling applied per platform at commit time */
+  const decorate = (raw: string, p: Platform) => {
+    let out = raw;
+    const short = `https://cadence.site/${Math.random().toString(36).slice(2, 7)}`;
+    out = out.replace(/https?:\/\/\S+/g, m => (shorten ? short : m));
+    if (utm) {
+      const params = `utm_source=${p}&utm_medium=social&utm_campaign=${encodeURIComponent(campaign || 'organic')}`;
+      out = out.replace(/(https?:\/\/\S+)/g, m => (m.includes('?') ? `${m}&${params}` : `${m}?${params}`));
+    }
+    return out;
+  };
+
+  const activeOverrides = Object.fromEntries(
+    plats.filter(p => overrides[p] && overrides[p]!.trim() && overrides[p]!.trim() !== text.trim()).map(p => [p, overrides[p]!.trim()]),
+  ) as Partial<Record<Platform, string>>;
+
   const base = {
-    text: text.trim(), platforms: plats, media,
+    text: decorate(text.trim(), plats[0]),
+    platforms: plats, media,
     attachment: attachment ?? undefined,
+    perPlatform: Object.keys(activeOverrides).length
+      ? Object.fromEntries(Object.entries(activeOverrides).map(([p, t]) => [p, decorate(t, p as Platform)])) as Partial<Record<Platform, string>>
+      : undefined,
     firstComment: igSelected ? firstComment.trim() : undefined,
     campaign: campaign || undefined, date: pdate, time: ptime,
   };
@@ -286,6 +321,48 @@ export function Composer() {
                 {text.length} / {limit}
               </span>
             </div>
+
+            {/* hashtag suggestions + link tooling */}
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              <span className="font-mono text-[9px] font-semibold uppercase tracking-wider text-faint">hashtags</span>
+              {suggestedTags(text).map(h => (
+                <button key={h} onClick={() => setText(t => (t.includes(h) ? t : `${t.trimEnd()} ${h}`))}
+                  className={cx('rounded-full border px-2 py-0.5 font-mono text-[10px] font-semibold transition active:scale-95',
+                    text.includes(h) ? 'border-moss bg-mint text-pine' : 'border-line bg-card text-mut hover:border-moss hover:text-pine')}>
+                  {h}
+                </button>
+              ))}
+              <span className="mx-1 h-4 w-px bg-line" />
+              <label className="flex cursor-pointer items-center gap-1.5 font-mono text-[10px] font-semibold text-mut">
+                <input type="checkbox" checked={utm} onChange={e => setUtm(e.target.checked)} className="h-3 w-3 accent-[#0b7a55]" />
+                auto-UTM
+              </label>
+              <label className="flex cursor-pointer items-center gap-1.5 font-mono text-[10px] font-semibold text-mut">
+                <input type="checkbox" checked={shorten} onChange={e => setShorten(e.target.checked)} className="h-3 w-3 accent-[#0b7a55]" />
+                shorten links
+              </label>
+            </div>
+
+            {/* per-platform customization */}
+            <button onClick={() => setShowOverrides(o => !o)}
+              className={cx('mt-2 flex items-center gap-1.5 rounded-md border px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wide transition',
+                showOverrides || Object.keys(activeOverrides).length ? 'border-moss bg-mint text-pine' : 'border-line bg-card text-mut hover:border-line2')}>
+              <Icon name="edit" size={10} /> per-platform copy {Object.keys(activeOverrides).length > 0 && `· ${Object.keys(activeOverrides).length} custom`}
+            </button>
+            {showOverrides && (
+              <div className="anim-rise mt-2 space-y-2">
+                {plats.map(p => (
+                  <label key={p} className="block">
+                    <span className="mb-1 flex items-center gap-1.5 font-mono text-[9.5px] font-semibold uppercase tracking-wider text-mut">
+                      <PlatformIcon p={p} size={13} /> {PLATFORMS[p].name} override
+                    </span>
+                    <textarea rows={2} value={overrides[p] ?? ''} placeholder={text.trim() || 'Same as master copy'}
+                      onChange={e => setOverrides(o => ({ ...o, [p]: e.target.value }))}
+                      className={cx(inputCls, 'resize-none text-xs leading-relaxed')} />
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
 
           <MediaUpload attachment={attachment} onChange={setAttachment} />
@@ -394,7 +471,7 @@ export function Composer() {
             </div>
           </div>
           <div key={activeTab + text.length} className="anim-fade max-h-[430px] overflow-y-auto pb-1">
-            <Preview p={activeTab} text={text} media={media} att={attachment} />
+            <Preview p={activeTab} text={overrides[activeTab] && overrides[activeTab]!.trim() ? overrides[activeTab]! : text} media={media} att={attachment} />
           </div>
           <p className="mt-2 border-t border-line pt-2 text-center font-mono text-[9.5px] text-faint">
             Exactly what {PLATFORMS[activeTab].name} users will see

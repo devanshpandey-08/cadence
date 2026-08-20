@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type {
-  AppState, Campaign, Contact, Deal, FormDef, Notif, PageDef, Post, Stage, Task, Thread, ToastMsg, User, View,
+  AppState, Asset, Campaign, Contact, Deal, FormDef, Notif, PageDef, Post, Stage, Task, Thread, ToastMsg, User, View,
 } from './types';
 import confetti from 'canvas-confetti';
 import { authApi } from './services/backend';
@@ -18,6 +18,9 @@ export type Action =
   | { t: 'notif-read' }
   | { t: 'contact+'; c: Contact }
   | { t: 'contact~'; id: string; p: Partial<Contact> }
+  | { t: 'contact-'; id: string }
+  | { t: 'asset+'; asset: Asset }
+  | { t: 'asset-'; id: string }
   | { t: 'deal+'; dl: Deal }
   | { t: 'deal~'; id: string; p: Partial<Deal> }
   | { t: 'task+'; task: Task }
@@ -47,6 +50,9 @@ export function reducer(s: AppState, a: Action): AppState {
     case 'notif-read': return { ...s, notifs: s.notifs.map(n => ({ ...n, read: true })) };
     case 'contact+': return { ...s, contacts: [a.c, ...s.contacts] };
     case 'contact~': return { ...s, contacts: s.contacts.map(c => c.id === a.id ? { ...c, ...a.p } : c) };
+    case 'contact-': return { ...s, contacts: s.contacts.filter(c => c.id !== a.id) };
+    case 'asset+': return { ...s, assets: [a.asset, ...s.assets] };
+    case 'asset-': return { ...s, assets: s.assets.filter(x => x.id !== a.id) };
     case 'deal+': return { ...s, deals: [a.dl, ...s.deals] };
     case 'deal~': return { ...s, deals: s.deals.map(dl => dl.id === a.id ? { ...dl, ...a.p } : dl) };
     case 'task+': return { ...s, tasks: [a.task, ...s.tasks] };
@@ -131,6 +137,9 @@ export interface Api {
   notify: (text: string, kind?: Notif['kind']) => void;
   addContact: (c: Omit<Contact, 'id' | 'createdAt' | 'lastActivity' | 'timeline'>) => string;
   patchContact: (id: string, p: Partial<Contact>) => void;
+  removeContact: (id: string) => void;
+  addAsset: (a: Asset) => void;
+  removeAsset: (id: string) => void;
   logActivity: (contactId: string, type: Contact['timeline'][number]['type'], text: string) => void;
   addDeal: (dl: Omit<Deal, 'id' | 'created' | 'notes'>) => void;
   patchDeal: (id: string, p: Partial<Deal>) => void;
@@ -214,8 +223,14 @@ export function makeApi(deps: ApiDeps): Api {
       toast(`${c.name} added to contacts`);
       return id;
     },
-    patchContact: (id, p) => { if (requireEdit()) dispatch({ t: 'contact~', id, p }); },
-    logActivity: (contactId, type, text) => {
+      patchContact: (id, p) => { if (requireEdit()) dispatch({ t: 'contact~', id, p }); },
+      removeContact: id => {
+        if (!requireEdit()) return;
+        dispatch({ t: 'contact-', id });
+        toast('Contact deleted (GDPR right to erasure)', 'warning');
+      },
+      addAsset: asset => { if (requireEdit()) dispatch({ t: 'asset+', asset }); },
+      removeAsset: id => { if (requireEdit()) dispatch({ t: 'asset-', id }); },    logActivity: (contactId, type, text) => {
       if (!requireEdit()) return;
       const today = isoOf(new Date());
       const c = get().contacts.find(x => x.id === contactId);
