@@ -27,6 +27,9 @@ const TITLES: Record<View, { t: string; s: string }> = {
   conversations: { t: 'SMS & WhatsApp', s: 'Meta Cloud API + Twilio, logged to the CRM timeline' },
   web: { t: 'Web Analytics', s: 'First-party, cookieless traffic for your pages' },
   seo: { t: 'SEO Suite', s: 'Audit, rank tracking and SERP preview' },
+  cdp: { t: 'Identity & Event Graph', s: 'P0 — dedupe, UTM persistence and the live event firehose' },
+  emailinfra: { t: 'Email Infrastructure', s: 'P1 — dedicated IP, transactional API, predictive send' },
+  importers: { t: 'Importers', s: 'P0 — one-click HubSpot & Klaviyo migration' },
   launch: { t: 'Launch Console', s: 'Pre-flight to production: multi-tenant, billing, platform APIs' },
   testing: { t: 'QA Console', s: 'Automated suites, load benchmarks and live security probes' },
   settings: { t: 'Settings', s: 'Team, channels, plan and integrations' },
@@ -109,6 +112,14 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
         { v: 'conversations', icon: 'message', label: 'SMS & WhatsApp' },
         { v: 'web', icon: 'globe', label: 'Web Analytics' },
         { v: 'seo', icon: 'search', label: 'SEO Suite' },
+      ],
+    },
+    {
+      label: 'Data Platform · P0',
+      items: [
+        { v: 'cdp', icon: 'users', label: 'Identity & Events' },
+        { v: 'emailinfra', icon: 'mail', label: 'Email Infra' },
+        { v: 'importers', icon: 'download', label: 'Importers' },
       ],
     },
     {
@@ -430,6 +441,7 @@ const GROUP_OF: Record<View, string> = {
   automations: 'Growth', calls: 'Growth',
   insights: 'Insights', experiments: 'Insights', attribution: 'Insights',
   conversations: 'Reach', web: 'Reach', seo: 'Reach',
+  cdp: 'Data Platform', emailinfra: 'Data Platform', importers: 'Data Platform',
   launch: 'Workspace', testing: 'Workspace', settings: 'Workspace',
 };
 

@@ -165,6 +165,7 @@ export function Composer() {
   const [text, setText] = useState('');
   const [plats, setPlats] = useState<Platform[]>(['linkedin']);
   const [media, setMedia] = useState<MediaType>('none');
+  const [igFormat, setIgFormat] = useState<'feed' | 'story' | 'reel'>('feed');
   const [firstComment, setFirstComment] = useState('');
   const [campaign, setCampaign] = useState('');
   const [pdate, setPdate] = useState(TODAY);
@@ -273,9 +274,36 @@ export function Composer() {
           </div>
 
           {igSelected && (
-            <div className="anim-rise">
-              <p className="mb-1 font-mono text-[9.5px] font-semibold uppercase tracking-[0.16em] text-mut">First comment · Instagram engagement hack</p>
-              <input className={inputCls} value={firstComment} onChange={e => setFirstComment(e.target.value)} placeholder="e.g. Full story + brew guide — link in bio" />
+            <div className="anim-rise space-y-2.5">
+              <div>
+                <p className="mb-1 font-mono text-[9.5px] font-semibold uppercase tracking-[0.16em] text-mut">Instagram format</p>
+                <div className="flex gap-1.5">
+                  {([
+                    { id: 'feed', label: 'Feed', icon: 'image', note: 'photo / carousel' },
+                    { id: 'story', label: 'Story', icon: 'clock', note: '24h · reminder to post manually if API blocked' },
+                    { id: 'reel', label: 'Reel', icon: 'play', note: '9:16 video via Content Publishing' },
+                  ] as const).map(f => (
+                    <button key={f.id} onClick={() => { setIgFormat(f.id); if (f.id === 'reel' && media === 'none') setMedia('video'); }}
+                      title={f.note}
+                      className={cx('flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] font-semibold transition-all active:scale-95',
+                        igFormat === f.id ? 'border-transparent bg-mint text-pine shadow-sm' : 'border-line bg-card text-mut hover:border-line2 hover:text-ink2')}>
+                      <Icon name={f.icon} size={13} /> {f.label}
+                    </button>
+                  ))}
+                </div>
+                {igFormat !== 'feed' && (
+                  <p className="anim-rise mt-1.5 flex items-start gap-1.5 rounded-lg bg-paper px-2.5 py-2 text-[10.5px] leading-snug text-mut">
+                    <Icon name="alert" size={12} className="mt-0.5 shrink-0 text-amber" />
+                    {igFormat === 'story'
+                      ? 'Stories publish where the API allows; otherwise we schedule it and push a reminder to post manually at the right moment.'
+                      : 'Reels publish directly through the Instagram Content Publishing API (9:16 video link).'}
+                  </p>
+                )}
+              </div>
+              <div>
+                <p className="mb-1 font-mono text-[9.5px] font-semibold uppercase tracking-[0.16em] text-mut">First comment · Instagram engagement hack</p>
+                <input className={inputCls} value={firstComment} onChange={e => setFirstComment(e.target.value)} placeholder="e.g. Full story + brew guide — link in bio" />
+              </div>
             </div>
           )}
 

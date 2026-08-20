@@ -9,6 +9,7 @@ export const GMAP: Record<string, View> = {
   d: 'dashboard', i: 'inbox', t: 'tasks', c: 'contacts', p: 'deals', s: 'calendar', m: 'campaigns', f: 'marketing',
   a: 'ai', u: 'automations', l: 'listening', k: 'calls', r: 'ads', g: 'launch', q: 'testing', x: 'settings',
   n: 'insights', e: 'experiments', b: 'attribution', w: 'conversations', y: 'web', o: 'seo',
+  h: 'cdp', j: 'emailinfra', z: 'importers',
 };
 
 const NAV_LABEL: Record<View, string> = {
@@ -17,6 +18,7 @@ const NAV_LABEL: Record<View, string> = {
   ai: 'AI Studio', automations: 'Automations', listening: 'Social listening', calls: 'Calls', ads: 'Ads Manager',
   insights: 'Insights (BI)', experiments: 'A/B testing', attribution: 'Attribution',
   conversations: 'SMS & WhatsApp', web: 'Web analytics', seo: 'SEO suite',
+  cdp: 'Identity & events', emailinfra: 'Email infrastructure', importers: 'Importers',
   launch: 'Launch console', testing: 'QA console', settings: 'Settings',
 };
 const NAV_ICON: Record<View, string> = {
@@ -25,6 +27,7 @@ const NAV_ICON: Record<View, string> = {
   ai: 'bolt', automations: 'refresh', listening: 'globe', calls: 'phone', ads: 'trend',
   insights: 'trend', experiments: 'layers', attribution: 'link',
   conversations: 'message', web: 'globe', seo: 'search',
+  cdp: 'users', emailinfra: 'mail', importers: 'download',
   launch: 'pulse', testing: 'shield', settings: 'sliders',
 };
 

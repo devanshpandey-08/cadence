@@ -4,7 +4,7 @@ import {
   cx, Icon, isoOf, monthMatrix, monthTitle, PLATFORM_IDS, PLATFORMS, PlatformIcon, STATUSES, STATUS_ICON, TODAY, weekOf, WEEKDAYS,
 } from '../meta';
 import type { Platform, Post, PostStatus } from '../types';
-import { Btn, Card, IconBtn, Modal, Pill, Seg } from '../components/ui';
+import { Btn, Card, IconBtn, Modal, Pill, Seg, Toggle } from '../components/ui';
 
 function PostChip({ p, onClick, wide }: { p: Post; onClick: () => void; wide?: boolean }) {
   const can = useCanEdit();
@@ -73,6 +73,7 @@ export function CalendarView() {
   const [plats, setPlats] = useState<Set<Platform>>(new Set(PLATFORM_IDS));
   const [status, setStatus] = useState<'all' | PostStatus>('all');
   const [overCell, setOverCell] = useState<string | null>(null);
+  const [twoWay, setTwoWay] = useState(true);
   const [dayModal, setDayModal] = useState<string | null>(null);
 
   const togglePlat = (p: Platform) => {
@@ -150,9 +151,21 @@ export function CalendarView() {
             <option value="all">All statuses</option>
             {Object.entries(STATUSES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
           </select>
+          <label className="flex items-center gap-2 rounded-lg border border-line bg-card px-2.5 py-1.5 text-[11px] font-semibold text-ink2" title="Push reschedules back to each platform and pull natively-scheduled posts in">
+            <span className={cx('flex items-center gap-1.5', twoWay ? 'text-pine' : 'text-mut')}>
+              <Icon name="refresh" size={13} /> Two-way sync
+            </span>
+            <Toggle on={twoWay} onChange={v => { setTwoWay(v); a.toast(v ? 'Native sync on — reschedules push to platforms, native posts appear here' : 'Native sync off — Cadence is now the only scheduler', v ? 'success' : 'warning'); }} />
+          </label>
           <Btn onClick={() => a.openComposer()}><Icon name="plus" size={14} sw={2.4} /> New post</Btn>
         </div>
       </div>
+      {twoWay && (
+        <p className="anim-rise -mt-1 flex items-center gap-1.5 text-[10.5px] text-faint">
+          <span className="live-dot h-1.5 w-1.5 rounded-full bg-moss" />
+          Dragging a post reschedules it on LinkedIn/Instagram natively · posts scheduled in the native apps appear on this grid.
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="mr-1 font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-mut">Platforms</span>

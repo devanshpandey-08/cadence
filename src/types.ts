@@ -4,6 +4,7 @@ export type View =
   | 'ai' | 'automations' | 'listening' | 'calls' | 'ads'
   | 'insights' | 'experiments' | 'attribution'
   | 'conversations' | 'web' | 'seo'
+  | 'cdp' | 'emailinfra' | 'importers'
   | 'testing' | 'launch' | 'settings';
 
 export type Platform =
