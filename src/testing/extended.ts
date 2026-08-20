@@ -420,7 +420,7 @@ const regression: Suite = {
   ],
 };
 
-export const EXTENDED_SUITES: Suite[] = [integration, e2eSuite, hardening, chaos, fuzz, edge, regression];
+export const EXTENDED_SUITES: Suite[] = [integration, e2eSuite, hardening, chaos, fuzz, edge, regression, ...DEEP_SUITES];
 export const EXT_TOTAL = EXTENDED_SUITES.reduce((n, s) => n + s.tests.length, 0);
 export const EXT_REQ_LABEL: Record<string, { label: string; spec: string }> = {
   integration: { label: 'Cross-module integration', spec: 'Type 2' },
@@ -430,6 +430,7 @@ export const EXT_REQ_LABEL: Record<string, { label: string; spec: string }> = {
   fuzz: { label: 'Data-integrity fuzzing', spec: 'Type 6' },
   edge: { label: 'Edge cases & i18n', spec: 'Type 7' },
   regression: { label: 'Regression guards', spec: 'Type 8' },
+  ...DEEP_REQ_LABEL,
 };
 
 /* ================= live audits (run against the real DOM/browser) ================= */

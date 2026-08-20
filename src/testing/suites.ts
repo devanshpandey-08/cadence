@@ -319,7 +319,12 @@ const security: Suite = {
     T('r5', 'logout clears the session and drops privileges', 'security', env => {
       env.setMe('admin');
       assert(env.getState().me !== null, 'signed in');
-      env.api.logout();
+      // never revoke the real user's browser session while the suite runs
+      let saved: string | null = null;
+      try { saved = localStorage.getItem('cadence-session-v2'); } catch { /* noop */ }
+      try { env.api.logout(); } finally {
+        try { if (saved) localStorage.setItem('cadence-session-v2', saved); } catch { /* noop */ }
+      }
       eq(env.getState().me, null, 'signed out');
     }),
     T('r6', 'VIEWER BLOCKED · add contact', 'roles', env => {
