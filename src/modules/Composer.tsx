@@ -300,7 +300,7 @@ export function Composer() {
                     { id: 'story', label: 'Story', icon: 'clock', note: '24h · reminder to post manually if API blocked' },
                     { id: 'reel', label: 'Reel', icon: 'play', note: '9:16 video via Content Publishing' },
                   ] as const).map(f => (
-                    <button key={f.id} onClick={() => { setIgFormat(f.id); if (f.id === 'reel' && media === 'none') setMedia('video'); }}
+                    <button key={f.id} onClick={() => setIgFormat(f.id)}
                       title={f.note}
                       className={cx('flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] font-semibold transition-all active:scale-95',
                         igFormat === f.id ? 'border-transparent bg-mint text-pine shadow-sm' : 'border-line bg-card text-mut hover:border-line2 hover:text-ink2')}>
@@ -394,7 +394,7 @@ export function Composer() {
             </div>
           </div>
           <div key={activeTab + text.length} className="anim-fade max-h-[430px] overflow-y-auto pb-1">
-            <Preview p={activeTab} text={text} media={media} />
+            <Preview p={activeTab} text={text} media={media} att={attachment} />
           </div>
           <p className="mt-2 border-t border-line pt-2 text-center font-mono text-[9.5px] text-faint">
             Exactly what {PLATFORMS[activeTab].name} users will see

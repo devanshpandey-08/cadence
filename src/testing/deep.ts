@@ -22,6 +22,7 @@ import { AppProvider, parsePersisted, reducer } from '../store';
 import { seedState } from '../data';
 import { isoOf, monthMatrix, pad, PLATFORMS, PLATFORM_IDS, STATUSES, STATUS_ICON, STAGES, WEEKDAYS, weekOf } from '../meta';
 import { buildCapiUserData, emqScore } from '../services/capi';
+import { readImageFile, videoEmbedSrc, MAX_CAROUSEL } from '../components/MediaUpload';
 import type { Contact } from '../types';
 
 import { Dashboard } from '../modules/Dashboard';
@@ -425,7 +426,50 @@ const prodSuite: Suite = {
   ],
 };
 
-export const DEEP_SUITES: Suite[] = [smokeSuite, contractsSuite, calendarSuite, persistSuite, puritySuite, floodSuite, prodSuite];
+/* ================= S21 · media upload pipeline =================
+   Proves photos/video actually work — parsing, limits, persistence. */
+const mediaSuite: Suite = {
+  id: 's21', name: 'Media upload pipeline', icon: 'image', tone: '#2f8f83',
+  blurb: 'Photos, carousels and video links — the upload path users actually hit.',
+  tests: [
+    T('md1', 'videoEmbedSrc parses YouTube watch + short links', 'contracts', () => {
+      assert(videoEmbedSrc('https://www.youtube.com/watch?v=dQw4w9WgXcQ') === 'https://www.youtube.com/embed/dQw4w9WgXcQ', 'watch URL');
+      assert(videoEmbedSrc('https://youtu.be/abcdefghijk') === 'https://www.youtube.com/embed/abcdefghijk', 'short URL');
+    }),
+    T('md2', 'videoEmbedSrc parses Vimeo + .mp4, rejects junk', 'contracts', () => {
+      assert(videoEmbedSrc('https://vimeo.com/76979871') === 'https://player.vimeo.com/video/76979871', 'vimeo');
+      assert(videoEmbedSrc('https://cdn.example.com/roast.mp4') === 'https://cdn.example.com/roast.mp4', 'mp4 passthrough');
+      eq(videoEmbedSrc('https://example.com/notavideo'), null, 'non-video rejected');
+    }),
+    T('md3', 'readImageFile rejects non-images and enforces the 8 MB cap', 'contracts', async () => {
+      let threw = false;
+      try { await readImageFile(new File(['x'], 'evil.txt', { type: 'text/plain' })); } catch { threw = true; }
+      assert(threw, 'text file rejected');
+      threw = false;
+      try { await readImageFile(new File([new Uint8Array(9 * 1024 * 1024)], 'big.png', { type: 'image/png' })); } catch { threw = true; }
+      assert(threw, 'oversized image rejected');
+    }),
+    T('md4', 'a small image becomes a persistable data-URL', 'contracts', async () => {
+      const px = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+      const f = await fetch(px).then(r => r.blob()).then(b => new File([b], 'pixel.gif', { type: 'image/gif' }));
+      const img = await readImageFile(f);
+      assert(img.url.indexOf('base64,R0lGODlhAQABAAAAACw=') > 0, 'stored as a base64 data-URL');
+      eq(img.sessionOnly, false, 'small enough to survive reload');
+    }),
+    T('md5', 'carousel is capped at 4 frames', 'contracts', () => {
+      eq(MAX_CAROUSEL, 4, 'Instagram/LinkedIn carousel limit honored');
+    }),
+    T('md6', 'post attachment round-trips through persistence', 'contracts', env => {
+      const att = { kind: 'image' as const, url: 'image/gif;base64,R0lGODlhAQABAAAAACw=', name: 'pixel.gif' };
+      env.api.addPost({ text: 'with photo', platforms: ['instagram'], date: isoOf(new Date()), time: '10:00', status: 'draft' as const, author: 'Maya Chen', media: 'image' as const, attachment: att });
+      const back = parsePersisted(JSON.stringify({ version: 2, data: env.getState() }))!;
+      const p = back.posts.find(x => x.text === 'with photo')!;
+      eq(p.attachment?.url, att.url, 'attachment survives reload');
+    }),
+  ],
+};
+
+export const DEEP_SUITES: Suite[] = [smokeSuite, contractsSuite, calendarSuite, persistSuite, puritySuite, floodSuite, prodSuite, mediaSuite];
 export const DEEP_TOTAL = DEEP_SUITES.reduce((n, s) => n + s.tests.length, 0);
 export const DEEP_REQ_LABEL: Record<string, { label: string; spec: string }> = {
   smoke: { label: 'Module smoke renders', spec: 'Type 9' },
