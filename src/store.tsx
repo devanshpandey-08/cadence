@@ -103,13 +103,19 @@ export function reducer(s: AppState, a: Action): AppState {
   }
 }
 
-/** Parses a persisted payload; returns null when corrupt, versioned-out, or empty. */
+/**
+ * Parses a persisted payload; returns null when corrupt, versioned-out, or empty.
+ *
+ * Migration-safe: seed defaults are spread UNDER the stored data, so any key a
+ * newer schema added (e.g. `assets`) is back-filled for older workspaces instead
+ * of arriving as `undefined` and crashing a screen. Stored keys always win.
+ */
 export function parsePersisted(raw: string | null): AppState | null {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
     if (parsed && parsed.version === 2 && parsed.data && Array.isArray(parsed.data.contacts)) {
-      return { ...parsed.data } as AppState;
+      return { ...seedState(), ...parsed.data } as AppState;
     }
     return null;
   } catch {

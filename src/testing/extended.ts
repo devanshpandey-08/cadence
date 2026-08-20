@@ -445,6 +445,15 @@ const regression: Suite = {
       const bytes = JSON.stringify({ version: 2, data: { ...seedState(), contacts: syntheticContacts(1000) } }).length;
       assert(bytes > 150_000 && bytes < 2_500_000, `${(bytes / 1e6).toFixed(2)}MB within the expected band`);
     }),
+    T('r-g7', 'guard: old payloads missing new schema keys back-fill from seed', 'regression', () => {
+      // Simulate a workspace saved before the Asset Library existed: no `assets` key.
+      const stale = { ...seedState() } as Record<string, unknown>;
+      delete stale.assets;
+      const restored = parsePersisted(JSON.stringify({ version: 2,  stale }));
+      assert(!!restored, 'payload still restores');
+      assert(Array.isArray((restored as AppState).assets), 'missing `assets` key back-filled as an array — a screen calling s.assets.filter() must not crash');
+      assert((restored as AppState).contacts.length === seedState().contacts.length, 'stored keys still win over seed');
+    }),
   ],
 };
 
