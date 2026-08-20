@@ -60,8 +60,8 @@ export function Importers() {
         setRun(r => (r && r.src === src ? { ...r, step: i + 1, done: i + 1 >= steps.length } : r));
         if (i + 1 >= steps.length) {
           const n = src === 'hubspot' ? 850 : 420;
-          a.importContacts(syntheticContacts(n).map(c => ({ ...c, id: `${src}-${c.id}`, source: 'Import' })));
-          a.toast(`${SRC_META[src].name} import complete — ${n.toLocaleString()} records merged into the unified database`, 'success');
+          const { added, merged } = a.importContacts(syntheticContacts(n).map(c => ({ ...c, id: `${src}-${c.id}`, source: 'Import' })));
+          a.toast(`${SRC_META[src].name} import complete — ${added.toLocaleString()} added · ${merged.toLocaleString()} merged, 0 duplicates`, 'success');
         }
       }, 420 * (i + 1));
       timers.current.push(t);

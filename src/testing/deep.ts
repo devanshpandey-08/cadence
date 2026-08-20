@@ -17,10 +17,12 @@ import type { ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import type { Suite, TestDef, TestEnv } from './framework';
-import { assert, budget, createEnv, eq } from './framework';
+import { assert, budget, createEnv, eq, measure } from './framework';
 import { AppProvider, parsePersisted, reducer } from '../store';
 import { seedState } from '../data';
 import { isoOf, monthMatrix, pad, PLATFORMS, PLATFORM_IDS, STATUSES, STATUS_ICON, STAGES, WEEKDAYS, weekOf } from '../meta';
+import { buildCapiUserData, emqScore } from '../services/capi';
+import type { Contact } from '../types';
 
 import { Dashboard } from '../modules/Dashboard';
 import { Contacts } from '../modules/Contacts';
@@ -41,6 +43,9 @@ import { Attribution } from '../modules/Attribution';
 import { Conversations } from '../modules/Conversations';
 import { WebAnalytics } from '../modules/WebAnalytics';
 import { Seo } from '../modules/Seo';
+import { Cdp } from '../modules/Cdp';
+import { EmailInfra } from '../modules/EmailInfra';
+import { Importers } from '../modules/Importers';
 import { Launch } from '../modules/Launch';
 import { Settings } from '../modules/Settings';
 import { Login } from '../components/Login';
@@ -103,14 +108,17 @@ const smokeSuite: Suite = {
         ['Calls', () => createElement(Calls)],
         ['Ads', () => createElement(Ads)],
       ]))),
-    T('sm3', 'insights + reach + workspace screens mount and render DOM', 'smoke', () =>
-      budget('8 screens', 4000, () => smoke('reach', [
+    T('sm3', 'insights + reach + data-platform + workspace screens mount and render DOM', 'smoke', () =>
+      budget('11 screens', 6000, () => smoke('reach', [
         ['Insights', () => createElement(Insights)],
         ['Experiments', () => createElement(Experiments)],
         ['Attribution', () => createElement(Attribution)],
         ['Conversations', () => createElement(Conversations)],
         ['Web analytics', () => createElement(WebAnalytics)],
         ['SEO', () => createElement(Seo)],
+        ['CDP · identity & events', () => createElement(Cdp)],
+        ['Email infra', () => createElement(EmailInfra)],
+        ['Importers', () => createElement(Importers)],
         ['Launch console', () => createElement(Launch)],
         ['Settings', () => createElement(Settings)],
       ]))),
@@ -347,7 +355,77 @@ const floodSuite: Suite = {
   ],
 };
 
-export const DEEP_SUITES: Suite[] = [smokeSuite, contractsSuite, calendarSuite, persistSuite, puritySuite, floodSuite];
+/* ================= S20 · production verification =================
+   The four claims that turn a demo into a product, made executable:
+   1) 10k-contact import lands with ZERO duplicates (dedupe is real).
+   2) CAPI write-back clears Meta's Event Match Quality bar (>=6/10).
+   3) The event stream ingests 1,000 events/sec with 0 drops.
+   4) The suite itself can't be silently shrunk (no disabled tests). */
+const prodSuite: Suite = {
+  id: 's20', name: 'Production verification', icon: 'shield', tone: '#0e7a52',
+  blurb: 'The claims that matter, proven against the real store — not asserted in copy.',
+  tests: [
+    T('pv1', '10,000-contact import lands with zero duplicates', 'prodverify', env => {
+      // 10,000 rows but only 8,500 unique emails — rows 8,500–9,999 deliberately
+      // repeat earlier addresses (the exact shape of a messy HubSpot export).
+      const N = 10000, UNIQUE = 8500;
+      const today = isoOf(new Date());
+      const batch: Contact[] = Array.from({ length: N }, (_, i) => ({
+        id: `pv-${i}`, name: `PV Contact ${i}`, email: `pv${i % UNIQUE}@load.test`,
+        company: `PVCo ${i % 97}`, title: 'Analyst', source: 'Import', tags: ['migrated'],
+        owner: 'Maya Chen', createdAt: today, lastActivity: today,
+        timeline: [{ id: `tl-${i}`, type: 'note', text: 'migrated', at: today }],
+      }));
+      const before = env.getState().contacts.length;
+      const res = budget('10k dedupe import', 2000, () => { env.api.importContacts(batch); });
+      const after = env.getState().contacts;
+      eq(after.length, before + UNIQUE, `only the ${UNIQUE} unique people were added`);
+      const emails = after.map(c => c.email.toLowerCase());
+      eq(new Set(emails).size, emails.length, 'no duplicate emails exist after import');
+      assert(res.metric.value !== undefined, 'import completed inside budget');
+      return res;
+    }),
+    T('pv2', 'CAPI write-back clears Meta Event Match Quality (≥6/10)', 'prodverify', () => {
+      // A real CRM conversion carries hashed email + phone + external_id + the
+      // cookie pair + ip/ua — that must clear Meta's usability bar.
+      const rich = buildCapiUserData({
+        email: 'INGRID@FjordCoffee.com ', phone: '+1 (503) 555-0142', id: 'c-9f21',
+        name: 'Ingrid Halvorsen', ip: '203.0.113.42', ua: 'Mozilla/5.0 (Macintosh)',
+        fbc: 'fb.1.1696000000000.AbCdEfGh', fbp: 'fb.1.1696000000000.987654321',
+      });
+      const richScore = emqScore(rich);
+      assert(richScore >= 6, `rich payload scored ${richScore}/10 — Meta needs ≥6 to optimize`);
+      // Prove the scorer isn't a rubber stamp: email-only must FAIL the bar.
+      const thin = emqScore(buildCapiUserData({ email: 'only@email.com' }));
+      assert(thin < 6, `email-only scored ${thin}/10 — the rubric correctly rejects thin payloads`);
+      return { metric: { value: `${richScore}/10`, budget: '≥ 6/10 (Meta EMQ)' } };
+    }),
+    T('pv3', 'event stream ingests 1,000 events/sec with zero drops', 'prodverify', env => {
+      const N = 1000;
+      const before = env.getState().notifs.length;
+      const ms = measure(() => {
+        for (let i = 0; i < N; i++) {
+          env.dispatch({ t: 'notif+', n: { id: `s${i}`, text: `stream event ${i}`, at: isoOf(new Date()), read: false, kind: 'system' } });
+        }
+      });
+      const landed = env.getState().notifs.length - before;
+      eq(landed, N, `all ${N} events were ingested — none buffered or dropped`);
+      const eps = Math.round(N / (ms / 1000));
+      assert(eps >= 1000, `throughput ${eps.toLocaleString()} ev/s is below the 1,000 ev/s requirement`);
+      return { metric: { value: `${eps.toLocaleString()} ev/s`, budget: '≥ 1,000 ev/s · 0 drops' } };
+    }),
+    T('pv4', 'guard: the suite only ever grows (no silently disabled tests)', 'prodverify', async () => {
+      const { SUITES, TOTAL_TESTS } = await import('./suites');
+      assert(TOTAL_TESTS >= 124, `only ${TOTAL_TESTS} checks remain — the floor is 124; someone removed tests`);
+      for (const s of SUITES) assert(s.tests.length > 0, `suite "${s.name}" is empty`);
+      // Detect the exact ID-collision bug that once hid 13 results.
+      const ids = SUITES.flatMap(s => s.tests.map(t => t.id));
+      eq(new Set(ids).size, ids.length, 'duplicate test IDs found — results would overwrite each other');
+    }),
+  ],
+};
+
+export const DEEP_SUITES: Suite[] = [smokeSuite, contractsSuite, calendarSuite, persistSuite, puritySuite, floodSuite, prodSuite];
 export const DEEP_TOTAL = DEEP_SUITES.reduce((n, s) => n + s.tests.length, 0);
 export const DEEP_REQ_LABEL: Record<string, { label: string; spec: string }> = {
   smoke: { label: 'Module smoke renders', spec: 'Type 9' },
@@ -356,4 +434,5 @@ export const DEEP_REQ_LABEL: Record<string, { label: string; spec: string }> = {
   persist: { label: 'Persistence corruption fuzz', spec: 'Type 12' },
   purity: { label: 'Reducer purity & idempotency', spec: 'Type 13' },
   flood: { label: 'Flood endurance', spec: 'Type 14' },
+  prodverify: { label: 'Production verification', spec: 'Type 15' },
 };

@@ -64,7 +64,34 @@ export function reducer(s: AppState, a: Action): AppState {
     case 'user+': return { ...s, users: [...s.users, a.u] };
     case 'user~': return { ...s, users: s.users.map(u => u.id === a.id ? { ...u, ...a.p } : u) };
     case 'account~': return { ...s, accounts: s.accounts.map(ac => ac.id === a.id ? { ...ac, ...a.p } : ac) };
-    case 'import': return { ...s, contacts: [...a.contacts, ...s.contacts] };
+    case 'import': {
+      // Dedupe by email (case-insensitive) and MERGE — never create a duplicate
+      // person. On a match we keep the existing record (stable id), union tags,
+      // and fold the imported timeline in front of the existing one.
+      const byEmail = new Map<string, Contact>();
+      for (const c of s.contacts) byEmail.set(c.email.toLowerCase(), c);
+      const replacements = new Map<string, Contact>(); // existingId -> merged
+      const fresh: Contact[] = [];
+      for (const inc of a.contacts) {
+        const key = inc.email.toLowerCase();
+        const hit = byEmail.get(key);
+        if (hit) {
+          const merged: Contact = {
+            ...hit,
+            tags: Array.from(new Set([...hit.tags, ...inc.tags])),
+            timeline: [...inc.timeline, ...hit.timeline],
+            createdAt: inc.createdAt < hit.createdAt ? inc.createdAt : hit.createdAt,
+          };
+          byEmail.set(key, merged);
+          replacements.set(hit.id, merged);
+        } else {
+          byEmail.set(key, inc);
+          fresh.push(inc);
+        }
+      }
+      const applyMerges = (c: Contact) => replacements.get(c.id) ?? c;
+      return { ...s, contacts: [...fresh.map(applyMerges), ...s.contacts.map(applyMerges)] };
+    }
     case 'reset': return seedState();
     default: return s;
   }
@@ -125,7 +152,7 @@ export interface Api {
   patchUser: (id: string, p: Partial<User>) => void;
   addUser: (name: string, email: string, role: User['role']) => void;
   patchAccount: (id: string, p: { connected: boolean }) => void;
-  importContacts: (list: Contact[]) => void;
+  importContacts: (list: Contact[]) => { added: number; merged: number };
   reset: () => void;
   login: (userId: string, remember: boolean) => void;
   logout: () => void;
@@ -318,10 +345,19 @@ export function makeApi(deps: ApiDeps): Api {
     patchAccount: (id, p) => { if (requireEdit()) dispatch({ t: 'account~', id, p }); },
 
     importContacts: list => {
-      if (!requireEdit()) return;
+      // Truthful accounting: compute the dedupe outcome BEFORE dispatching.
+      const existing = new Set(get().contacts.map((c: Contact) => c.email.toLowerCase()));
+      let merged = 0;
+      for (const c of list) {
+        if (existing.has(c.email.toLowerCase())) merged += 1;
+        else existing.add(c.email.toLowerCase());
+      }
+      const added = list.length - merged;
+      if (!requireEdit()) return { added, merged };
       dispatch({ t: 'import', contacts: list });
-      notify(`HubSpot import finished — ${list.length} contacts added`, 'import');
-      toast(`Import complete — ${list.length} contacts added`);
+      notify(`Import finished — ${added.toLocaleString()} new, ${merged.toLocaleString()} merged (deduped)`, 'import');
+      toast(`Import complete — ${added.toLocaleString()} added · ${merged.toLocaleString()} merged, 0 duplicates`);
+      return { added, merged };
     },
 
     reset: () => {

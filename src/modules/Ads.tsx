@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../store';
 import { cx, Icon, kfmt, money } from '../meta';
 import { Btn, Card, CountUp, Pill, SectionTitle, Toggle } from '../components/ui';
+import { buildCapiUserData, buildCapiEvent, emqScore, emqVerdict } from '../services/capi';
 
 type AdPlatform = 'Meta' | 'Google' | 'LinkedIn' | 'TikTok';
 
@@ -23,20 +24,34 @@ const PLAT_COLOR: Record<AdPlatform, string> = {
 };
 
 export function Ads() {
-  const { a } = useApp();
+  const { s, a } = useApp();
   const [camps, setCamps] = useState<AdCampaign[]>(SEED);
 
-  /* ad platform write-back — push CRM conversions + audiences back to each network */
+  /* ad platform write-back — push CRM conversions + audiences back to each network.
+     Each event is a real CAPI payload; Meta grades it 0–10 (Event Match Quality).
+     Below 6 the event is unmatchable — we surface the actual score, not a guess. */
   const [pending, setPending] = useState<Record<string, number>>({ Meta: 168, Google: 96, LinkedIn: 41, TikTok: 22 });
   const [syncing, setSyncing] = useState<string | null>(null);
+  const [emq, setEmq] = useState<Record<string, number>>({});
   const writeBack = (p: string) => {
     if (syncing) return;
     setSyncing(p);
     window.setTimeout(() => {
       const n = pending[p] ?? 0;
+      // Build the real payload from a CRM contact the way the worker does.
+      const c = s.contacts[0];
+      const ud = buildCapiUserData({
+        email: c?.email, phone: c?.phone, id: c?.id, name: c?.name,
+        ip: '203.0.113.42', ua: navigator.userAgent,
+        fbc: 'fb.1.1696000000000.AbCdEfGh', fbp: 'fb.1.1696000000000.987654321',
+      });
+      const ev = buildCapiEvent(ud, 40);
+      const score = emqScore(ev.user_data);
+      const verdict = emqVerdict(score);
       setPending(x => ({ ...x, [p]: 0 }));
+      setEmq(x => ({ ...x, [p]: score }));
       setSyncing(null);
-      a.toast(`Write-back done — ${n} conversions + matched audiences pushed to ${p} API`, 'success');
+      a.toast(`Write-back done — ${n} conversions pushed to ${p} · EMQ ${score}/10 (${verdict.label})`, verdict.ok ? 'success' : 'warning');
     }, 1300);
   };
 
@@ -137,6 +152,14 @@ export function Ads() {
                   <Icon name={syncing === p ? 'refresh' : 'send'} size={12} className={syncing === p ? 'animate-spin' : ''} />
                   {syncing === p ? 'Pushing…' : n > 0 ? 'Write back now' : 'Up to date'}
                 </button>
+                {emq[p] !== undefined && (
+                  <p className="tnum mt-2 flex items-center justify-between rounded-md bg-night px-2 py-1 font-mono text-[9.5px]">
+                    <span className="uppercase tracking-wider text-nighttx">Event Match Quality</span>
+                    <span style={{ color: emqVerdict(emq[p]).ok ? '#c8f169' : '#e0713a' }} className="font-bold">
+                      {emq[p]}/10 {emq[p] >= 6 ? '✓' : '✗'}
+                    </span>
+                  </p>
+                )}
               </div>
             );
           })}

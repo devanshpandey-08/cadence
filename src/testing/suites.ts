@@ -493,6 +493,7 @@ export const REQ_LABEL: Record<string, { label: string; spec: string }> = {
   persist: { label: 'Persistence corruption fuzz', spec: 'Every path' },
   purity: { label: 'Reducer purity', spec: 'Every path' },
   flood: { label: 'Flood endurance', spec: 'Every path' },
+  prodverify: { label: 'Production verification', spec: 'Every path' },
 };
 
 export async function runOne(def: Suite['tests'][number]) {
