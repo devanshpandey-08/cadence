@@ -19,6 +19,7 @@ const NAV_LABEL: Record<View, string> = {
   insights: 'Insights (BI)', experiments: 'A/B testing', attribution: 'Attribution',
   conversations: 'SMS & WhatsApp', web: 'Web analytics', seo: 'SEO suite',
   cdp: 'Identity & events', emailinfra: 'Email infrastructure', importers: 'Importers',
+  agents: 'Agent Fleet', security: 'Security & sessions',
   launch: 'Launch console', testing: 'QA console', settings: 'Settings',
 };
 const NAV_ICON: Record<View, string> = {
@@ -28,6 +29,7 @@ const NAV_ICON: Record<View, string> = {
   insights: 'trend', experiments: 'layers', attribution: 'link',
   conversations: 'message', web: 'globe', seo: 'search',
   cdp: 'users', emailinfra: 'mail', importers: 'download',
+  agents: 'cpu', security: 'shield',
   launch: 'pulse', testing: 'shield', settings: 'sliders',
 };
 

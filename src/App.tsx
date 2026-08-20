@@ -34,6 +34,8 @@ const Seo = L(import('./modules/Seo').then(m => ({ default: m.Seo })));
 const Cdp = L(import('./modules/Cdp').then(m => ({ default: m.Cdp })));
 const EmailInfra = L(import('./modules/EmailInfra').then(m => ({ default: m.EmailInfra })));
 const Importers = L(import('./modules/Importers').then(m => ({ default: m.Importers })));
+const Agents = L(import('./modules/Agents').then(m => ({ default: m.Agents })));
+const Security = L(import('./modules/Security').then(m => ({ default: m.Security })));
 const Launch = L(import('./modules/Launch').then(m => ({ default: m.Launch })));
 const Testing = L(import('./modules/Testing').then(m => ({ default: m.Testing })));
 const Settings = L(import('./modules/Settings').then(m => ({ default: m.Settings })));
@@ -74,6 +76,8 @@ function Router() {
       case 'cdp': return <Cdp />;
       case 'emailinfra': return <EmailInfra />;
       case 'importers': return <Importers />;
+      case 'agents': return <Agents />;
+      case 'security': return <Security />;
       case 'launch': return <Launch />;
       case 'testing': return <Testing />;
       case 'settings': return <Settings />;

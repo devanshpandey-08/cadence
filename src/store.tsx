@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type {
-  AppState, Asset, Campaign, Contact, Deal, FormDef, Notif, PageDef, Post, Stage, Task, Thread, ToastMsg, User, View,
+  Agent, AgentApproval, ApiKeyDef, AppState, Asset, Campaign, Contact, Deal, DeviceSession, FormDef, Notif, PageDef, Post, SecuritySettings, Stage, Task, Thread, ToastMsg, User, View,
 } from './types';
 import confetti from 'canvas-confetti';
 import { authApi } from './services/backend';
@@ -39,6 +39,15 @@ export type Action =
   | { t: 'user~'; id: string; p: Partial<User> }
   | { t: 'account~'; id: string; p: Partial<Contact & object> & object }
   | { t: 'import'; contacts: Contact[] }
+  | { t: 'agent~'; id: string; p: Partial<Agent> }
+  | { t: 'agent-act'; id: string; n: number }
+  | { t: 'appr+'; a: AgentApproval }
+  | { t: 'appr~'; id: string; p: Partial<AgentApproval> }
+  | { t: 'session-'; id: string }
+  | { t: 'apikey+'; k: ApiKeyDef }
+  | { t: 'apikey~'; id: string; p: Partial<ApiKeyDef> }
+  | { t: 'apikey-'; id: string }
+  | { t: 'sec~'; p: Partial<SecuritySettings> }
   | { t: 'reset' };
 
 export function reducer(s: AppState, a: Action): AppState {
@@ -70,6 +79,15 @@ export function reducer(s: AppState, a: Action): AppState {
     case 'user+': return { ...s, users: [...s.users, a.u] };
     case 'user~': return { ...s, users: s.users.map(u => u.id === a.id ? { ...u, ...a.p } : u) };
     case 'account~': return { ...s, accounts: s.accounts.map(ac => ac.id === a.id ? { ...ac, ...a.p } : ac) };
+    case 'agent~': return { ...s, agents: s.agents.map(ag => ag.id === a.id ? { ...ag, ...a.p } : ag) };
+    case 'agent-act': return { ...s, agents: s.agents.map(ag => ag.id === a.id ? { ...ag, actions: ag.actions + a.n, status: Math.random() < 0.5 ? 'working' : ag.status } : ag) };
+    case 'appr+': return { ...s, approvals: [a.a, ...s.approvals] };
+    case 'appr~': return { ...s, approvals: s.approvals.map(ap => ap.id === a.id ? { ...ap, ...a.p } : ap) };
+    case 'session-': return { ...s, sessions: s.sessions.filter(x => x.id !== a.id) };
+    case 'apikey+': return { ...s, apiKeys: [a.k, ...s.apiKeys] };
+    case 'apikey~': return { ...s, apiKeys: s.apiKeys.map(k => k.id === a.id ? { ...k, ...a.p } : k) };
+    case 'apikey-': return { ...s, apiKeys: s.apiKeys.filter(k => k.id !== a.id) };
+    case 'sec~': return { ...s, security: { ...s.security, ...a.p } };
     case 'import': {
       // Dedupe by email (case-insensitive) and MERGE — never create a duplicate
       // person. On a match we keep the existing record (stable id), union tags,
@@ -168,6 +186,13 @@ export interface Api {
   addUser: (name: string, email: string, role: User['role']) => void;
   patchAccount: (id: string, p: { connected: boolean }) => void;
   importContacts: (list: Contact[]) => { added: number; merged: number };
+  setAgentTier: (id: string, tier: Agent['tier']) => void;
+  decideApproval: (id: string, ok: boolean) => void;
+  revokeSession: (id: string) => void;
+  setSecurity: (p: Partial<SecuritySettings>) => void;
+  rotateApiKey: (id: string) => void;
+  addApiKey: (label: string, scopes: string[]) => void;
+  removeApiKey: (id: string) => void;
   reset: () => void;
   login: (userId: string, remember: boolean) => void;
   logout: () => void;
@@ -381,6 +406,51 @@ export function makeApi(deps: ApiDeps): Api {
       return { added, merged };
     },
 
+    /* ---------- agent fleet (admin/editor only) ---------- */
+    setAgentTier: (id, tier) => {
+      if (!requireEdit()) return;
+      const ag = get().agents.find(x => x.id === id);
+      dispatch({ t: 'agent~', id, p: { tier } });
+      if (ag) toast(`${ag.name} → ${tier === 'autonomous' ? 'Autonomous (acts, then reports)' : tier === 'copilot' ? 'Co-pilot (drafts for review)' : 'Supervised (asks first)'}`, 'info');
+    },
+    decideApproval: (id, ok) => {
+      if (!requireEdit()) return;
+      const ap = get().approvals.find(x => x.id === id);
+      dispatch({ t: 'appr~', id, p: { status: ok ? 'approved' : 'rejected' } });
+      if (ap) toast(ok ? `Approved — ${ap.agent} will proceed` : `Rejected — ${ap.agent} stood down`, ok ? 'success' : 'warning');
+    },
+
+    /* ---------- security & sessions (admin only) ---------- */
+    revokeSession: id => {
+      if (!requireAdmin()) return;
+      const sess = get().sessions.find(x => x.id === id);
+      if (sess?.current) { toast('You cannot revoke your current session', 'warning'); return; }
+      dispatch({ t: 'session-', id });
+      toast(`Session revoked — ${sess?.device ?? 'device'} signed out`, 'warning');
+    },
+    setSecurity: p => {
+      if (!requireAdmin()) return;
+      dispatch({ t: 'sec~', p });
+      if (p.mfa !== undefined) toast(p.mfa ? 'Multi-factor authentication enabled' : 'MFA disabled — not recommended', p.mfa ? 'success' : 'warning');
+    },
+    rotateApiKey: id => {
+      if (!requireAdmin()) return;
+      const k = get().apiKeys.find(x => x.id === id);
+      const prefix = 'cad_live_' + Math.random().toString(36).slice(2, 6);
+      dispatch({ t: 'apikey~', id, p: { prefix, lastUsed: 'never' } });
+      toast(`Rotated ${k?.label ?? 'key'} — old secret revoked immediately`, 'warning');
+    },
+    addApiKey: (label, scopes) => {
+      if (!requireAdmin()) return;
+      dispatch({ t: 'apikey+', k: { id: uid(), label, prefix: 'cad_live_' + Math.random().toString(36).slice(2, 6), scopes, created: isoOf(new Date()), lastUsed: 'never' } });
+      toast(`API key "${label}" created — copy the secret now`, 'success');
+    },
+    removeApiKey: id => {
+      if (!requireAdmin()) return;
+      dispatch({ t: 'apikey-', id });
+      toast('API key revoked', 'warning');
+    },
+
     reset: () => {
       if (deps.persist) { try { localStorage.removeItem(KEY); } catch { /* noop */ } }
       dispatch({ t: 'reset' });
@@ -507,6 +577,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
         push(`New lead: ${name} via "${form?.name ?? 'your form'}"`, 'auto');
       }
     }, 24000);
+    return () => window.clearInterval(t);
+  }, [dispatch]);
+
+  /* ---------- agent fleet heartbeat ----------
+     Autonomous agents accrue operations continuously and occasionally surface a
+     human-in-the-loop approval. Mirrors the production worker → approval queue. */
+  useEffect(() => {
+    const APPR: Array<Omit<AgentApproval, 'id' | 'at' | 'status'>> = [
+      { agent: 'Bid Sentinel', action: 'Shift $1,100 Meta → LinkedIn', detail: 'LinkedIn CPL down 22% WoW. Low risk, reversible in 24h.', risk: 'low' },
+      { agent: 'Inbox Agent', action: 'Reply to 4 pricing questions', detail: 'Drafted from saved replies. Confidence 0.88–0.95.', risk: 'low' },
+      { agent: 'Audience Scout', action: 'Suppress 86 bounced emails', detail: 'Hard bounces detected. Protects sender reputation.', risk: 'med' },
+      { agent: 'Anomaly Sentinel', action: 'Throttle TikTok spend 30%', detail: 'Frequency capped at 4.2 — creative fatigue likely.', risk: 'med' },
+      { agent: 'Commerce Agent', action: 'Send 23 cart-recovery emails', detail: '18h abandonment window, consented subscribers only.', risk: 'low' },
+    ];
+    const t = window.setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
+      const st = ref.current;
+      if (!st.me || st.agents.length === 0) return;
+      // accrue actions on 1-3 random agents
+      const n = 1 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < n; i++) {
+        const ag = st.agents[Math.floor(Math.random() * st.agents.length)];
+        dispatch({ t: 'agent-act', id: ag.id, n: 1 + Math.floor(Math.random() * 6) });
+      }
+      // ~30% chance: surface a pending approval
+      if (Math.random() < 0.3 && st.approvals.filter(x => x.status === 'pending').length < 5) {
+        const c = APPR[Math.floor(Math.random() * APPR.length)];
+        dispatch({ t: 'appr+', a: { ...c, id: uid(), at: isoOf(new Date()), status: 'pending' } });
+        dispatch({ t: 'notif+', n: { id: uid(), text: `${c.agent} requests approval: ${c.action}`, at: isoOf(new Date()), read: false, kind: 'approval' } });
+      }
+    }, 15000);
     return () => window.clearInterval(t);
   }, [dispatch]);
 

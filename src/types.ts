@@ -5,6 +5,7 @@ export type View =
   | 'insights' | 'experiments' | 'attribution'
   | 'conversations' | 'web' | 'seo'
   | 'cdp' | 'emailinfra' | 'importers'
+  | 'agents' | 'security'
   | 'testing' | 'launch' | 'settings';
 
 export type Platform =
@@ -183,6 +184,49 @@ export interface Notif { id: string; text: string; at: string; read: boolean; ki
 
 export interface ToastMsg { id: string; text: string; kind: 'success' | 'info' | 'warning'; }
 
+/* ---------- Agent fleet (human-in-the-loop autonomy) ---------- */
+export type AgentTier = 'supervised' | 'copilot' | 'autonomous';
+export interface Agent {
+  id: string;
+  name: string;
+  role: string;
+  icon: string;
+  color: string;
+  tier: AgentTier;
+  actions: number;          // accrued operations
+  status: 'idle' | 'working';
+}
+export interface AgentApproval {
+  id: string;
+  agent: string;            // agent name
+  action: string;           // what it wants to do
+  detail: string;
+  risk: 'low' | 'med' | 'high';
+  status: 'pending' | 'approved' | 'rejected';
+  at: string;
+}
+
+/* ---------- Security & sessions ---------- */
+export interface DeviceSession {
+  id: string;
+  device: string;
+  kind: 'laptop' | 'smartphone' | 'server';
+  browser: string;
+  location: string;
+  ip: string;
+  current: boolean;
+  lastActive: string;
+}
+export interface ApiKeyDef {
+  id: string;
+  label: string;
+  prefix: string;
+  scopes: string[];
+  created: string;
+  lastUsed: string;
+}
+export interface SecuritySettings { mfa: boolean; anomalyAlerts: boolean; rateLimit: boolean; }
+
 export interface ComposerState { open: boolean; postId?: string; date?: string; attachment?: MediaAttachment; }
 
 export type CreateSignal = 'contact' | 'deal' | 'campaign' | 'task' | null;
@@ -208,4 +252,9 @@ export interface AppState {
   accounts: SocialAccount[];
   notifs: Notif[];
   toasts: ToastMsg[];
+  agents: Agent[];
+  approvals: AgentApproval[];
+  sessions: DeviceSession[];
+  apiKeys: ApiKeyDef[];
+  security: SecuritySettings;
 }

@@ -254,6 +254,35 @@ export function seedState(): AppState {
       { id: 'n3', text: 'X post failed: API rate limit. Retry from the calendar.', at: d(-1), read: false, kind: 'system' },
       { id: 'n4', text: 'HubSpot import finished — 48 contacts, 6 companies, 9 deals', at: d(-9), read: true, kind: 'import' },
     ],
+    agents: [
+      { id: 'ag1', name: 'Bid Sentinel', role: 'Re-allocates ad spend toward winning channels', icon: 'trend', color: '#3d6bff', tier: 'autonomous', actions: 1284, status: 'working' },
+      { id: 'ag2', name: 'Inbox Agent', role: 'Drafts replies, tags sentiment, routes to owners', icon: 'inbox', color: '#e2618f', tier: 'copilot', actions: 3412, status: 'working' },
+      { id: 'ag3', name: 'Creative Synth', role: 'Generates on-brand post variants & subject lines', icon: 'spark', color: '#e0713a', tier: 'copilot', actions: 892, status: 'idle' },
+      { id: 'ag4', name: 'SEO Scout', role: 'Watches rankings, drafts briefs, flags decay', icon: 'search', color: '#2c8c7a', tier: 'supervised', actions: 456, status: 'idle' },
+      { id: 'ag5', name: 'Anomaly Sentinel', role: 'Flags spend, deliverability & traffic anomalies', icon: 'alert', color: '#c2483b', tier: 'autonomous', actions: 210, status: 'working' },
+      { id: 'ag6', name: 'Attribution Analyst', role: 'Re-weights models, surfaces credit shifts', icon: 'link', color: '#8a63d2', tier: 'supervised', actions: 178, status: 'idle' },
+      { id: 'ag7', name: 'Audience Scout', role: 'Builds & syncs high-propensity segments', icon: 'users', color: '#d9b45c', tier: 'copilot', actions: 640, status: 'idle' },
+      { id: 'ag8', name: 'Commerce Agent', role: 'Recovers carts, times review requests', icon: 'coin', color: '#5b7d3f', tier: 'supervised', actions: 322, status: 'idle' },
+    ],
+    approvals: [
+      { id: 'ap1', agent: 'Bid Sentinel', action: 'Move $2,400 from TikTok → Meta', detail: 'Meta ROAS 4.1 vs TikTok 1.8 over 7 days. Projected +$3.1k monthly return.', risk: 'med', status: 'pending', at: d(0) },
+      { id: 'ap2', agent: 'Creative Synth', action: 'Publish 3 variants of the cold brew post', detail: 'A/B/C hooks drafted. Best-Time engine suggests 11:30 Thursday.', risk: 'low', status: 'pending', at: d(0) },
+      { id: 'ap3', agent: 'Audience Scout', action: 'Sync 1,240-profile segment to Meta', detail: 'High-propensity wholesale buyers, consented, suppression list applied.', risk: 'med', status: 'pending', at: d(0) },
+      { id: 'ap4', agent: 'Inbox Agent', action: 'Auto-resolve 12 resolved-intent threads', detail: 'Matched "thanks / got it" patterns with >0.92 confidence.', risk: 'low', status: 'approved', at: d(-1) },
+      { id: 'ap5', agent: 'Anomaly Sentinel', action: 'Pause Google campaign #4', detail: 'CPA spiked 3.4× in 2 hours, budget pacing at 89%. Likely tracking pixel misfire.', risk: 'high', status: 'approved', at: d(-1) },
+    ],
+    sessions: [
+      { id: 'ss1', device: 'MacBook Pro 16"', kind: 'laptop', browser: 'Chrome 128', location: 'Portland, US', ip: '73.12.44.9', current: true, lastActive: 'now' },
+      { id: 'ss2', device: 'iPhone 15', kind: 'smartphone', browser: 'Cadence iOS', location: 'Portland, US', ip: '73.12.44.11', current: false, lastActive: '2h ago' },
+      { id: 'ss3', device: 'Windows Desktop', kind: 'laptop', browser: 'Edge 127', location: 'Lisbon, PT', ip: '85.240.18.3', current: false, lastActive: '1d ago' },
+      { id: 'ss4', device: 'CI Runner', kind: 'server', browser: 'API client', location: 'us-west-2', ip: '54.213.0.77', current: false, lastActive: '3h ago' },
+    ],
+    apiKeys: [
+      { id: 'ak1', label: 'Production server', prefix: 'cad_live_9f3k', scopes: ['contacts:read', 'posts:write', 'campaigns:write'], created: d(-40), lastUsed: '12m ago' },
+      { id: 'ak2', label: 'Zapier integration', prefix: 'cad_live_x72m', scopes: ['contacts:read', 'contacts:write'], created: d(-21), lastUsed: '3h ago' },
+      { id: 'ak3', label: 'Reporting read-only', prefix: 'cad_test_q19z', scopes: ['reports:read'], created: d(-9), lastUsed: '2d ago' },
+    ],
+    security: { mfa: true, anomalyAlerts: true, rateLimit: true },
     toasts: [],
   };
 }
