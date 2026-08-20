@@ -488,6 +488,11 @@ export const REQ_LABEL: Record<string, { label: string; spec: string }> = {
   resilience: { label: 'Crash-safe persistence', spec: 'Hardening' },
   scale: { label: 'Throughput budgets', spec: 'Scalability' },
   api: { label: 'Import / REST surface', spec: 'Feature 18' },
+  smoke: { label: 'Module smoke renders', spec: 'Every path' },
+  contracts: { label: 'API surface & contracts', spec: 'Every path' },
+  persist: { label: 'Persistence corruption fuzz', spec: 'Every path' },
+  purity: { label: 'Reducer purity', spec: 'Every path' },
+  flood: { label: 'Flood endurance', spec: 'Every path' },
 };
 
 export async function runOne(def: Suite['tests'][number]) {

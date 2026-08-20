@@ -13,6 +13,7 @@
 import type { AppState, Deal, Platform, Post, Stage, Thread } from '../types';
 import type { Suite, TestDef, TestEnv } from './framework';
 import { assert, budget, createEnv, eq, measure, syntheticContacts, syntheticPosts } from './framework';
+import { DEEP_REQ_LABEL, DEEP_SUITES } from './deep';
 import { parsePersisted, reducer } from '../store';
 import { seedState } from '../data';
 import * as metaAll from '../meta';
@@ -147,6 +148,33 @@ export const E2E_FLOWS: E2EFlow[] = [
       { label: 'Schedule it', run: e => { const c = e.getState().campaigns.find(x => x.name === 'E2E blast')!; e.dispatch({ t: 'campaign~', id: c.id, p: { status: 'scheduled' } }); eq(e.getState().campaigns.find(x => x.id === c.id)!.status, 'scheduled', 'scheduled'); } },
       { label: 'Fire the send', run: e => { const c = e.getState().campaigns.find(x => x.name.startsWith('E2E blast'))!; e.api.sendCampaign(c.id); assert(e.getState().campaigns.find(x => x.id === c.id)!.status === 'sent', 'sent'); } },
       { label: 'Metrics are internally consistent', run: e => { const c = e.getState().campaigns.find(x => x.name.startsWith('E2E blast'))!; assert(c.sent > 0 && c.opens <= c.sent && c.clicks <= c.opens, 'funnel math holds'); } },
+    ],
+  },
+  {
+    id: 'j5', name: 'The approval loop, end to end', persona: 'Editor → Admin',
+    blurb: 'A post walks the full governance path: draft, submit, approve, auto-schedule, publish.',
+    steps: [
+      { label: 'Sign in as editor', run: e => { e.setMe('editor'); eq(e.getState().me?.role, 'editor', 'editor session'); } },
+      { label: 'Draft the post', run: e => { const id = e.api.addPost({ text: 'Governance post', platforms: ['linkedin', 'x'], date: isoOf(new Date(Date.now() + 864e5)), time: '10:00', status: 'draft', author: 'Test Editor', media: 'none' }); assert(e.getState().posts.some(p => p.id === id && p.status === 'draft'), 'draft stored'); } },
+      { label: 'Submit for approval', run: e => { const p = e.getState().posts.find(x => x.text === 'Governance post')!; e.api.patchPost(p.id, { status: 'pending' }); eq(e.getState().posts.find(x => x.id === p.id)!.status, 'pending', 'in the queue'); } },
+      { label: 'Switch to the approver', run: e => { e.setMe('admin'); eq(e.getState().me?.role, 'admin', 'admin takes over'); } },
+      { label: 'Approve it', run: e => { const p = e.getState().posts.find(x => x.text === 'Governance post')!; e.api.patchPost(p.id, { status: 'approved' }); eq(e.getState().posts.find(x => x.id === p.id)!.status, 'approved', 'approved'); } },
+      { label: 'Auto-schedule to the slot', run: e => { const p = e.getState().posts.find(x => x.text === 'Governance post')!; e.api.patchPost(p.id, { status: 'scheduled' }); eq(e.getState().posts.find(x => x.id === p.id)!.status, 'scheduled', 'on the calendar'); } },
+      { label: 'Publish', run: e => { const p = e.getState().posts.find(x => x.text === 'Governance post')!; e.api.patchPost(p.id, { status: 'published' }); eq(e.getState().posts.find(x => x.id === p.id)!.status, 'published', 'live'); } },
+      { label: 'Full chain verified, no skipped states', run: e => { const p = e.getState().posts.find(x => x.text === 'Governance post')!; assert(p.status === 'published' && p.author === 'Test Editor', 'chain intact from draft to live'); } },
+    ],
+  },
+  {
+    id: 'j6', name: 'Viewer read-only contract', persona: 'Viewer',
+    blurb: 'Every mutation a viewer attempts is silently refused — the workspace must be bit-identical.',
+    steps: [
+      { label: 'Sign in as viewer', run: e => { e.setMe('viewer'); eq(e.getState().me?.role, 'viewer', 'viewer session'); } },
+      { label: 'Snapshot the whole workspace', run: e => { const st = e.getState(); (e as TestEnv & { snap?: string }).snap = JSON.stringify({ c: st.contacts.length, d: st.deals.length, t: st.tasks.length, p: st.posts.length, m: st.campaigns.length, f: st.forms.length }); } },
+      { label: 'Try to add a contact', run: e => { const before = e.getState().contacts.length; e.api.addContact({ name: 'Nope', email: 'nope@viewer.dev', company: 'X', title: 'X', source: 'Manual', tags: [], owner: 'X' }); eq(e.getState().contacts.length, before, 'blocked'); } },
+      { label: 'Try to move a deal', run: e => { const d = e.getState().deals[0]; const stage = d.stage; e.api.moveDeal(d.id, 'won'); eq(e.getState().deals.find(x => x.id === d.id)!.stage, stage, 'blocked'); } },
+      { label: 'Try to publish a post', run: e => { const p = e.getState().posts[0]; const status = p.status; e.api.patchPost(p.id, { status: 'published' }); eq(e.getState().posts.find(x => x.id === p.id)!.status, status, 'blocked'); } },
+      { label: 'Try to log activity', run: e => { const c = e.getState().contacts[0]; const n = c.timeline.length; e.api.logActivity(c.id, 'note', 'sneaky'); eq(e.getState().contacts.find(x => x.id === c.id)!.timeline.length, n, 'blocked'); } },
+      { label: 'Workspace is bit-identical', run: e => { const st = e.getState(); const now = JSON.stringify({ c: st.contacts.length, d: st.deals.length, t: st.tasks.length, p: st.posts.length, m: st.campaigns.length, f: st.forms.length }); eq(now, (e as TestEnv & { snap?: string }).snap, 'nothing changed'); } },
     ],
   },
 ];
