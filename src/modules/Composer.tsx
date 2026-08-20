@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../store';
-import { cx, Icon, PLATFORM_IDS, PLATFORMS, PlatformIcon, STATUSES, TODAY } from '../meta';
+import { addDays, cx, Icon, isoOf, PLATFORM_IDS, PLATFORMS, PlatformIcon, STATUSES, TODAY } from '../meta';
 import type { MediaAttachment, MediaType, Platform, PostStatus } from '../types';
 import { Btn, IconBtn, inputCls, Modal, Pill } from '../components/ui';
 import { MediaUpload, videoEmbedSrc } from '../components/MediaUpload';
@@ -198,6 +198,8 @@ export function Composer() {
   const [campaign, setCampaign] = useState('');
   const [pdate, setPdate] = useState(TODAY);
   const [ptime, setPtime] = useState('12:00');
+  const [repeat, setRepeat] = useState<'none' | 'daily' | 'weekly' | 'monthly'>('none');
+  const [repeatCount, setRepeatCount] = useState(4);
   const [tab, setTab] = useState<Platform>('linkedin');
   const [err, setErr] = useState('');
 
@@ -209,10 +211,11 @@ export function Composer() {
       setFirstComment(editing.firstComment ?? ''); setCampaign(editing.campaign ?? '');
       setPdate(editing.date); setPtime(editing.time); setTab(editing.platforms[0]);
     } else {
-      setText(''); setPlats(['linkedin']); setAttachment(null); setFirstComment(''); setCampaign('');
+      setText(''); setPlats(['linkedin']); setAttachment(s.composer.attachment ?? null); setFirstComment(''); setCampaign('');
       setPdate(date ?? TODAY); setPtime('12:00'); setTab('linkedin');
     }
     setOverrides(editing?.perPlatform ?? {}); setShowOverrides(false); setUtm(true); setShorten(true);
+    setRepeat('none'); setRepeatCount(4);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, postId, date]);
 
@@ -265,14 +268,29 @@ export function Composer() {
     campaign: campaign || undefined, date: pdate, time: ptime,
   };
 
+  const shift = (n: number) => {
+    const d = new Date(pdate + 'T00:00:00');
+    if (repeat === 'daily') return isoOf(addDays(d, n));
+    if (repeat === 'weekly') return isoOf(addDays(d, n * 7));
+    if (repeat === 'monthly') { const x = new Date(d); x.setMonth(x.getMonth() + n); return isoOf(x); }
+    return pdate;
+  };
+
   const commit = (status: PostStatus, msg: string, kind: 'success' | 'info' | 'warning' = 'success') => {
     if (editing) {
       a.patchPost(editing.id, { ...base, status });
     } else {
       a.addPost({ ...base, status, author: 'Maya Chen', likes: 0, comments: 0, shares: 0 });
+      // recurring series: schedule the follow-ups (new posts only)
+      if (repeat !== 'none' && status === 'scheduled') {
+        for (let i = 1; i < repeatCount; i++) {
+          a.addPost({ ...base, date: shift(i), status: 'scheduled', author: 'Maya Chen', likes: 0, comments: 0, shares: 0 });
+        }
+      }
     }
     if (status === 'pending') a.notify(`Post submitted for approval: "${text.trim().slice(0, 44)}…"`);
-    a.toast(msg, kind);
+    const seriesNote = repeat !== 'none' && status === 'scheduled' && !editing ? ` · ${repeatCount}-post ${repeat} series` : '';
+    a.toast(msg + seriesNote, kind);
     a.closeComposer();
   };
 
@@ -417,6 +435,25 @@ export function Composer() {
                 {s.campaigns.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
               </select>
             </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2.5">
+            <label className="block">
+              <span className="mb-1 block font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-mut">Repeat</span>
+              <select className={inputCls} value={repeat} onChange={e => setRepeat(e.target.value as typeof repeat)}>
+                <option value="none">Does not repeat</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </label>
+            {repeat !== 'none' && (
+              <label className="block anim-rise">
+                <span className="mb-1 block font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-mut">Occurrences</span>
+                <input type="number" min={2} max={12} className={inputCls} value={repeatCount}
+                  onChange={e => setRepeatCount(Math.min(12, Math.max(2, Number(e.target.value) || 2)))} />
+              </label>
+            )}
           </div>
 
           <div className="space-y-1.5">

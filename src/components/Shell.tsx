@@ -16,6 +16,7 @@ const TITLES: Record<View, { t: string; s: string }> = {
   calendar: { t: 'Content Calendar', s: 'Plan, approve and publish everywhere' },
   campaigns: { t: 'Email Campaigns', s: 'Broadcasts delivered through your own SMTP' },
   marketing: { t: 'Forms & Pages', s: 'Capture leads and convert on landing pages' },
+  assets: { t: 'Asset Library', s: 'Photos, videos and brand media — one bucket for every channel' },
   ai: { t: 'AI Studio', s: 'Phase 3 — on-device copilot for posts, replies, scoring' },
   automations: { t: 'Automations', s: 'Phase 2 — drip sequences that run while you sleep' },
   listening: { t: 'Social Listening', s: 'Phase 2 — every mention, scored and streamed' },
@@ -81,6 +82,7 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
         { v: 'calendar', icon: 'calendar', label: 'Calendar', badge: pending, badgeColor: '#3b6fd4' },
         { v: 'campaigns', icon: 'mail', label: 'Campaigns' },
         { v: 'marketing', icon: 'layout', label: 'Forms & Pages' },
+        { v: 'assets', icon: 'image', label: 'Asset Library' },
       ],
     },
     {
@@ -436,7 +438,7 @@ function UserMenu() {
 const GROUP_OF: Record<View, string> = {
   dashboard: 'Overview', inbox: 'Overview', tasks: 'Overview',
   contacts: 'CRM', deals: 'CRM',
-  calendar: 'Marketing', campaigns: 'Marketing', marketing: 'Marketing',
+  calendar: 'Marketing', campaigns: 'Marketing', marketing: 'Marketing', assets: 'Marketing',
   ai: 'Intelligence', listening: 'Intelligence', ads: 'Intelligence',
   automations: 'Growth', calls: 'Growth',
   insights: 'Insights', experiments: 'Insights', attribution: 'Insights',

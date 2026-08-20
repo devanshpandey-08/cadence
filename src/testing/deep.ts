@@ -33,6 +33,7 @@ import { Inbox } from '../modules/Inbox';
 import { Tasks } from '../modules/Tasks';
 import { Campaigns } from '../modules/Campaigns';
 import { Marketing } from '../modules/Marketing';
+import { Assets } from '../modules/Assets';
 import { AIStudio } from '../modules/AIStudio';
 import { Automations } from '../modules/Automations';
 import { Listening } from '../modules/Listening';
@@ -102,7 +103,8 @@ const smokeSuite: Suite = {
         ['Marketing', () => createElement(Marketing)],
       ]))),
     T('sm2', 'growth + intelligence screens mount and render DOM', 'smoke', () =>
-      budget('5 screens', 4000, () => smoke('growth', [
+      budget('6 screens', 4500, () => smoke('growth', [
+        ['Assets', () => createElement(Assets)],
         ['AI Studio', () => createElement(AIStudio)],
         ['Automations', () => createElement(Automations)],
         ['Listening', () => createElement(Listening)],

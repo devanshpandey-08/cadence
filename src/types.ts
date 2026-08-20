@@ -1,6 +1,6 @@
 export type View =
   | 'dashboard' | 'inbox' | 'tasks' | 'contacts' | 'deals'
-  | 'calendar' | 'campaigns' | 'marketing'
+  | 'calendar' | 'campaigns' | 'marketing' | 'assets'
   | 'ai' | 'automations' | 'listening' | 'calls' | 'ads'
   | 'insights' | 'experiments' | 'attribution'
   | 'conversations' | 'web' | 'seo'
@@ -183,7 +183,7 @@ export interface Notif { id: string; text: string; at: string; read: boolean; ki
 
 export interface ToastMsg { id: string; text: string; kind: 'success' | 'info' | 'warning'; }
 
-export interface ComposerState { open: boolean; postId?: string; date?: string; }
+export interface ComposerState { open: boolean; postId?: string; date?: string; attachment?: MediaAttachment; }
 
 export type CreateSignal = 'contact' | 'deal' | 'campaign' | 'task' | null;
 

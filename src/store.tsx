@@ -131,7 +131,7 @@ export interface Api {
   ui: (p: Partial<AppState>) => void;
   openContact: (id: string) => void;
   openDeal: (id: string) => void;
-  openComposer: (p?: { postId?: string; date?: string }) => void;
+  openComposer: (p?: { postId?: string; date?: string; attachment?: import('./types').MediaAttachment }) => void;
   closeComposer: () => void;
   toast: (text: string, kind?: ToastMsg['kind']) => void;
   notify: (text: string, kind?: Notif['kind']) => void;

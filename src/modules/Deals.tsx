@@ -166,8 +166,78 @@ function DealDrawer() {
             ))}
           </div>
         </div>
+        {/* products & quote */}
+        <div>
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-mut">Products & line items · {(d.items ?? []).length}</h3>
+            {(d.items ?? []).length > 0 && (
+              <Btn size="sm" variant="outline" onClick={() => { a.patchDeal(d.id, { value: itemsTotal }); a.toast(`Deal value set to ${money(itemsTotal)} from line items`); }}>
+                <Icon name="refresh" size={12} /> Auto-set value
+              </Btn>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            {(d.items ?? []).map((it, i) => (
+              <div key={i} className="anim-rise flex items-center gap-2 rounded-lg border border-line bg-paper/60 px-3 py-2">
+                <span className="min-w-0 flex-1 truncate font-mono text-[11.5px] font-semibold text-ink">{it.sku}</span>
+                <span className="tnum font-mono text-[11px] text-mut">{it.qty} × {money(it.price)}</span>
+                <span className="tnum w-20 text-right font-mono text-[11.5px] font-bold text-ink">{money(it.qty * it.price)}</span>
+                <IconBtn name="trash" title="Remove line" className="hover:bg-dangerbg hover:text-danger"
+                  onClick={() => a.patchDeal(d.id, { items: (d.items ?? []).filter((_, x) => x !== i) })} />
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <input value={newItem.sku} onChange={e => setNewItem({ ...newItem, sku: e.target.value })} placeholder="SKU / product"
+              className={cx(inputCls, 'flex-1')} />
+            <input value={newItem.qty} onChange={e => setNewItem({ ...newItem, qty: e.target.value })} type="number" placeholder="Qty"
+              className={cx(inputCls, 'w-16')} />
+            <input value={newItem.price} onChange={e => setNewItem({ ...newItem, price: e.target.value })} type="number" placeholder="Price"
+              className={cx(inputCls, 'w-24')} />
+            <Btn size="sm" variant="outline" onClick={() => {
+              if (!newItem.sku.trim() || !Number(newItem.price)) return;
+              a.patchDeal(d.id, { items: [...(d.items ?? []), { sku: newItem.sku.trim(), qty: Math.max(1, Number(newItem.qty) || 1), price: Number(newItem.price) }] });
+              setNewItem({ sku: '', qty: '1', price: '' });
+            }}><Icon name="plus" size={13} /> Add</Btn>
+          </div>
+          {(d.items ?? []).length > 0 && (
+            <div className="mt-3 flex items-center justify-between rounded-lg border border-line bg-night px-3.5 py-2.5">
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.16em] text-nighttx">Line-item total</span>
+              <span className="tnum font-display text-[16px] font-bold text-ink">{money(itemsTotal)}</span>
+            </div>
+          )}
+          <div className="mt-2.5 flex items-center gap-2">
+            <Btn size="sm" disabled={(d.items ?? []).length === 0 || d.quoteSent}
+              onClick={() => {
+                const qid = `Q-${Math.floor(1000 + Math.random() * 9000)}`;
+                a.patchDeal(d.id, { quoteSent: true, notes: [{ id: uid(), text: `Quote ${qid} generated & sent — ${money(itemsTotal)}, net-30 terms`, at: isoOf(new Date()), by: 'Maya Chen' }, ...d.notes] });
+                if (c) a.logActivity(c.id, 'email', `Quote ${qid} sent — ${money(itemsTotal)}`);
+                a.toast(`Quote ${qid} sent to ${c?.name ?? 'contact'} — e-sign link included`);
+              }}>
+              <Icon name="file" size={13} /> {d.quoteSent ? 'Quote sent' : 'Generate & send quote'}
+            </Btn>
+            {d.quoteSent && <Pill color="#2e9e4f" tint="#e0f6e4" dot>awaiting e-sign</Pill>}
+            {(d.items ?? []).length === 0 && <span className="text-[10.5px] text-faint">add line items to enable quoting</span>}
+          </div>
+        </div>
+
         <p className="border-t border-line pt-3 font-mono text-[10px] text-faint">Created {relTime(d.created)} · linked tasks auto-create when moved to Proposal</p>
       </div>
+
+      <Modal open={askLoss} onClose={() => setAskLoss(false)} title="Close as lost" sub="A reason is required — it powers churn analytics and win-back campaigns." w="max-w-sm"
+        footer={<><Btn variant="ghost" onClick={() => setAskLoss(false)}>Cancel</Btn>
+          <Btn variant="danger" onClick={() => { a.patchDeal(d.id, { lossReason: lossPick }); a.moveDeal(d.id, 'lost'); a.toast(`Closed lost — "${lossPick}" recorded`, 'warning'); setAskLoss(false); }}>
+            <Icon name="x" size={13} sw={2.4} /> Close lost</Btn></>}>
+        <div className="grid grid-cols-2 gap-2">
+          {LOSS_REASONS.map(r => (
+            <button key={r} onClick={() => setLossPick(r)}
+              className={cx('rounded-lg border px-3 py-2.5 text-left text-xs font-semibold transition active:scale-[0.97]',
+                lossPick === r ? 'border-danger bg-dangerbg text-danger' : 'border-line bg-card text-ink2 hover:border-line2')}>
+              {r}
+            </button>
+          ))}
+        </div>
+      </Modal>
     </Drawer>
   );
 }

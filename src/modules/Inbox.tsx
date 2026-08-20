@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useApp } from '../store';
-import { cx, Icon, PLATFORMS, PlatformIcon, relTime } from '../meta';
+import { cx, Icon, PLATFORMS, PlatformIcon, relTime, TODAY, uid } from '../meta';
 import type { Thread } from '../types';
-import { Avatar, Btn, Card, EmptyState, IconBtn, Pill, Seg } from '../components/ui';
+import { Avatar, Btn, Card, EmptyState, IconBtn, Pill, Seg, Toggle } from '../components/ui';
 
 type Filter = 'all' | 'unread' | 'progress' | 'resolved';
 
@@ -12,11 +12,72 @@ const STATUS_META = {
   resolved: { label: 'Resolved', color: '#0e7a52', tint: '#e2efe7' },
 } as const;
 
+const CANNED = [
+  { label: 'Thanks!', text: 'Thanks so much for reaching out! We appreciate you 🙌' },
+  { label: 'Pricing', text: 'Great question — our wholesale pricing starts at 12kg/month. Want me to send over the full sheet?' },
+  { label: 'Shipping', text: 'We ship worldwide within 24h of roasting. What city should I quote for?' },
+  { label: 'Escalate', text: 'Let me loop in our team and get back to you within the hour with a proper answer.' },
+];
+
+/* SLA: how long since the last inbound message, for open threads */
+function slaHours(t: Thread): number | null {
+  if (t.status === 'resolved') return null;
+  const lastThem = [...t.messages].reverse().find(m => m.from === 'them');
+  if (!lastThem) return null;
+  const then = new Date(lastThem.at + 'T00:00:00').getTime();
+  const now = new Date(TODAY + 'T00:00:00').getTime() + new Date().getHours() * 36e5;
+  return Math.max(0, (now - then) / 36e5);
+}
+function SlaChip({ t }: { t: Thread }) {
+  const h = slaHours(t);
+  if (h === null) return null;
+  const label = h < 1 ? `${Math.round(h * 60)}m` : h < 48 ? `${Math.round(h)}h` : `${Math.round(h / 24)}d`;
+  const tone = h < 4 ? { c: '#2e9e4f', t: '#e0f6e4' } : h < 24 ? { c: '#e86a17', t: '#ffe9d4' } : { c: '#c2483b', t: '#f8e6e2' };
+  return <Pill color={tone.c} tint={tone.t} className="tnum"><Icon name="clock" size={9} /> {label}</Pill>;
+}
+
+/* naive keyword sentiment for auto-tagging */
+function sentiment(t: Thread): 'pos' | 'neg' | null {
+  const txt = (t.preview + ' ' + t.messages.map(m => m.text).join(' ')).toLowerCase();
+  if (/\b(love|amazing|great|thanks|awesome|perfect|delicious)\b/.test(txt)) return 'pos';
+  if (/\b(angry|terrible|awful|refund|broken|late|disappointed|waste)\b/.test(txt)) return 'neg';
+  return null;
+}
+
 export function Inbox() {
   const { s, a } = useApp();
   const [filter, setFilter] = useState<Filter>('all');
   const [sel, setSel] = useState<string | null>(s.threads[0]?.id ?? null);
   const [reply, setReply] = useState('');
+  const [autoReply, setAutoReply] = useState(false);
+
+  /* auto-response: when a new inbound message lands while armed, send a canned ack */
+  const msgCount = useRef<Record<string, number>>({});
+  useEffect(() => {
+    for (const t of s.threads) {
+      const prev = msgCount.current[t.id];
+      const now = t.messages.length;
+      if (prev !== undefined && now > prev && autoReply) {
+        const last = t.messages[now - 1];
+        if (last && last.from === 'them') {
+          a.patchThread(t.id, {
+            status: 'progress',
+            messages: [...t.messages, { id: uid(), from: 'us', text: 'Thanks for the message! A human is on it — expect a full reply within the hour. 🙌', at: TODAY }],
+          });
+          a.toast(`Auto-response sent to ${t.person}`, 'info');
+        }
+      }
+      msgCount.current[t.id] = now;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [s.threads, autoReply]);
+
+  /* average first-response time across resolved/open threads (simulated from SLA data) */
+  const avgResp = useMemo(() => {
+    const hrs = s.threads.map(slaHours).filter((h): h is number => h !== null);
+    if (!hrs.length) return 2.4;
+    return Math.max(0.2, hrs.reduce((n, h) => n + h, 0) / hrs.length);
+  }, [s.threads]);
 
   const threads = useMemo(
     () => s.threads.filter(t => filter === 'all' || t.status === filter),
@@ -46,7 +107,35 @@ export function Inbox() {
   };
 
   return (
-    <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-[320px_1fr]">
+    <div className="space-y-3.5">
+      {/* inbox ops header */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Card className="flex items-center gap-3 px-4 py-2.5">
+          <span className="grid h-8 w-8 place-items-center rounded-lg bg-mint text-moss"><Icon name="bolt" size={15} /></span>
+          <div className="leading-tight">
+            <p className="text-[12px] font-bold text-ink">Auto-response</p>
+            <p className="font-mono text-[9.5px] text-mut">ack new DMs instantly, then a human takes over</p>
+          </div>
+          <Toggle on={autoReply} onChange={v => { setAutoReply(v); a.toast(v ? 'Auto-response armed — inbound messages get an instant ack' : 'Auto-response off', v ? 'success' : 'info'); }} />
+        </Card>
+        <Card className="flex items-center gap-3 px-4 py-2.5">
+          <span className="grid h-8 w-8 place-items-center rounded-lg bg-steelbg text-steel"><Icon name="clock" size={15} /></span>
+          <div className="leading-tight">
+            <p className="tnum text-[12px] font-bold text-ink">{avgResp < 1 ? `${Math.round(avgResp * 60)}m` : `${avgResp.toFixed(1)}h`} avg response</p>
+            <p className="font-mono text-[9.5px] text-mut">SLA target · under 4h</p>
+          </div>
+          <Pill color={avgResp < 4 ? '#2e9e4f' : '#c2483b'} tint={avgResp < 4 ? '#e0f6e4' : '#f8e6e2'} dot>{avgResp < 4 ? 'on target' : 'breaching'}</Pill>
+        </Card>
+        <Card className="flex items-center gap-3 px-4 py-2.5">
+          <span className="grid h-8 w-8 place-items-center rounded-lg bg-amberbg text-amber"><Icon name="users" size={15} /></span>
+          <div className="leading-tight">
+            <p className="tnum text-[12px] font-bold text-ink">{counts.unread} unread · {counts.progress} open</p>
+            <p className="font-mono text-[9.5px] text-mut">auto-routes to least-loaded rep in prod</p>
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-[320px_1fr]">
       {/* thread list */}
       <Card className="flex max-h-[calc(100vh-170px)] flex-col overflow-hidden">
         <div className="flex items-center justify-between border-b border-line bg-paper/60 px-3 py-2">
@@ -79,8 +168,11 @@ export function Inbox() {
                   <span className="shrink-0 font-mono text-[9px] text-faint">{relTime(t.messages[t.messages.length - 1].at)}</span>
                 </div>
                 <p className="mt-0.5 truncate text-[11px] text-mut">{t.preview}</p>
-                <div className="mt-1 flex items-center gap-1.5">
+                <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <Pill color={STATUS_META[t.status].color} tint={STATUS_META[t.status].tint}>{STATUS_META[t.status].label}</Pill>
+                  <SlaChip t={t} />
+                  {sentiment(t) === 'neg' && <Pill color="#c2483b" tint="#f8e6e2"><Icon name="alert" size={9} /> negative</Pill>}
+                  {sentiment(t) === 'pos' && <Pill color="#2e9e4f" tint="#e0f6e4"><Icon name="heart" size={9} /> positive</Pill>}
                   <span className="font-mono text-[9px] uppercase tracking-wider text-faint">{t.kind}</span>
                 </div>
               </div>
@@ -158,6 +250,15 @@ export function Inbox() {
                   <Icon name="check" size={11} /> Resolve
                 </button>
               </div>
+              <div className="flex flex-wrap items-center gap-1.5 pb-2">
+                <span className="font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-faint">Canned</span>
+                {CANNED.map(c => (
+                  <button key={c.label} onClick={() => setReply(c.text)}
+                    className="rounded-full border border-line bg-card px-2.5 py-1 text-[10.5px] font-semibold text-ink2 transition hover:border-moss hover:bg-mint/50 hover:text-pine active:scale-95">
+                    {c.label}
+                  </button>
+                ))}
+              </div>
               <div className="flex items-end gap-2">
                 <textarea value={reply} onChange={e => setReply(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) send(); }}
@@ -169,6 +270,7 @@ export function Inbox() {
           </>
         )}
       </Card>
+      </div>
     </div>
   );
 }
