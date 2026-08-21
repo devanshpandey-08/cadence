@@ -6,7 +6,8 @@ export type View =
   | 'conversations' | 'web' | 'seo'
   | 'cdp' | 'emailinfra' | 'importers'
   | 'agents' | 'security'
-  | 'testing' | 'launch' | 'settings';
+  | 'testing' | 'launch' | 'settings'
+  | 'servicehub';
 
 export type Platform =
   | 'linkedin' | 'instagram' | 'facebook' | 'x'

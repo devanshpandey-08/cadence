@@ -33,6 +33,7 @@ const TITLES: Record<View, { t: string; s: string }> = {
   emailinfra: { t: 'Email Infrastructure', s: 'P1 — dedicated IP, transactional API, predictive send' },
   importers: { t: 'Importers', s: 'P0 — one-click HubSpot & Klaviyo migration' },
   agents: { t: 'Agent Fleet', s: 'P3 — tiered autonomy with human-in-the-loop approvals' },
+  servicehub: { t: 'Service Hub', s: 'Customer support tickets, SLAs, CSAT & knowledge base' },
   security: { t: 'Security & Sessions', s: 'Access control, MFA, sessions and API keys' },
   launch: { t: 'Launch Console', s: 'Pre-flight to production: multi-tenant, billing, platform APIs' },
   testing: { t: 'QA Console', s: 'Automated suites, load benchmarks and live security probes' },
@@ -132,6 +133,12 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
       label: 'Autonomy · P3',
       items: [
         { v: 'agents', icon: 'cpu', label: 'Agent Fleet', badge: pendingApprovals, badgeColor: '#e0b45c' },
+      ],
+    },
+    {
+      label: 'Service · HubSpot Alternative',
+      items: [
+        { v: 'servicehub', icon: 'headset', label: 'Service Hub' },
       ],
     },
     {
@@ -456,6 +463,7 @@ const GROUP_OF: Record<View, string> = {
   conversations: 'Reach', web: 'Reach', seo: 'Reach',
   cdp: 'Data Platform', emailinfra: 'Data Platform', importers: 'Data Platform',
   agents: 'Autonomy',
+  servicehub: 'Service',
   security: 'Workspace', launch: 'Workspace', testing: 'Workspace', settings: 'Workspace',
 };
 
