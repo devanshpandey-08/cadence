@@ -5,6 +5,7 @@ import { Avatar, IconBtn, Modal, Pill, ToastHost } from './ui';
 import { cx, Icon, kfmt, relTime, TODAY } from '../meta';
 import type { View } from '../types';
 import { CommandPalette, GMAP } from './CommandPalette';
+import { Copilot } from './Copilot';
 import { ROLE_LABEL, ROLE_SCOPE } from '../services/backend';
 
 const TITLES: Record<View, { t: string; s: string }> = {
@@ -16,6 +17,7 @@ const TITLES: Record<View, { t: string; s: string }> = {
   calendar: { t: 'Content Calendar', s: 'Plan, approve and publish everywhere' },
   campaigns: { t: 'Email Campaigns', s: 'Broadcasts delivered through your own SMTP' },
   marketing: { t: 'Forms & Pages', s: 'Capture leads and convert on landing pages' },
+  assets: { t: 'Asset Library', s: 'Photos, videos and brand media — one bucket for every channel' },
   ai: { t: 'AI Studio', s: 'Phase 3 — on-device copilot for posts, replies, scoring' },
   automations: { t: 'Automations', s: 'Phase 2 — drip sequences that run while you sleep' },
   listening: { t: 'Social Listening', s: 'Phase 2 — every mention, scored and streamed' },
@@ -27,6 +29,11 @@ const TITLES: Record<View, { t: string; s: string }> = {
   conversations: { t: 'SMS & WhatsApp', s: 'Meta Cloud API + Twilio, logged to the CRM timeline' },
   web: { t: 'Web Analytics', s: 'First-party, cookieless traffic for your pages' },
   seo: { t: 'SEO Suite', s: 'Audit, rank tracking and SERP preview' },
+  cdp: { t: 'Identity & Event Graph', s: 'P0 — dedupe, UTM persistence and the live event firehose' },
+  emailinfra: { t: 'Email Infrastructure', s: 'P1 — dedicated IP, transactional API, predictive send' },
+  importers: { t: 'Importers', s: 'P0 — one-click HubSpot & Klaviyo migration' },
+  agents: { t: 'Agent Fleet', s: 'P3 — tiered autonomy with human-in-the-loop approvals' },
+  security: { t: 'Security & Sessions', s: 'Access control, MFA, sessions and API keys' },
   launch: { t: 'Launch Console', s: 'Pre-flight to production: multi-tenant, billing, platform APIs' },
   testing: { t: 'QA Console', s: 'Automated suites, load benchmarks and live security probes' },
   settings: { t: 'Settings', s: 'Team, channels, plan and integrations' },
@@ -55,6 +62,7 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
   const unread = s.threads.filter(t => t.status === 'unread').length;
   const due = s.tasks.filter(t => !t.done && t.due <= TODAY).length;
   const pending = s.posts.filter(p => p.status === 'pending').length;
+  const pendingApprovals = s.approvals.filter(ap => ap.status === 'pending').length;
 
   const groups: { label: string; items: { v: View; icon: string; label: string; badge?: number; badgeColor?: string }[] }[] = [
     {
@@ -78,6 +86,7 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
         { v: 'calendar', icon: 'calendar', label: 'Calendar', badge: pending, badgeColor: '#3b6fd4' },
         { v: 'campaigns', icon: 'mail', label: 'Campaigns' },
         { v: 'marketing', icon: 'layout', label: 'Forms & Pages' },
+        { v: 'assets', icon: 'image', label: 'Asset Library' },
       ],
     },
     {
@@ -112,8 +121,23 @@ function Sidebar({ mobileOpen, onClose }: { mobileOpen: boolean; onClose: () => 
       ],
     },
     {
+      label: 'Data Platform · P0',
+      items: [
+        { v: 'cdp', icon: 'users', label: 'Identity & Events' },
+        { v: 'emailinfra', icon: 'mail', label: 'Email Infra' },
+        { v: 'importers', icon: 'download', label: 'Importers' },
+      ],
+    },
+    {
+      label: 'Autonomy · P3',
+      items: [
+        { v: 'agents', icon: 'cpu', label: 'Agent Fleet', badge: pendingApprovals, badgeColor: '#e0b45c' },
+      ],
+    },
+    {
       label: 'Workspace',
       items: [
+        { v: 'security', icon: 'shield', label: 'Security' },
         { v: 'launch', icon: 'pulse', label: 'Launch Console' },
         { v: 'testing', icon: 'shield', label: 'QA Console' },
         { v: 'settings', icon: 'sliders', label: 'Settings' },
@@ -425,15 +449,17 @@ function UserMenu() {
 const GROUP_OF: Record<View, string> = {
   dashboard: 'Overview', inbox: 'Overview', tasks: 'Overview',
   contacts: 'CRM', deals: 'CRM',
-  calendar: 'Marketing', campaigns: 'Marketing', marketing: 'Marketing',
+  calendar: 'Marketing', campaigns: 'Marketing', marketing: 'Marketing', assets: 'Marketing',
   ai: 'Intelligence', listening: 'Intelligence', ads: 'Intelligence',
   automations: 'Growth', calls: 'Growth',
   insights: 'Insights', experiments: 'Insights', attribution: 'Insights',
   conversations: 'Reach', web: 'Reach', seo: 'Reach',
-  launch: 'Workspace', testing: 'Workspace', settings: 'Workspace',
+  cdp: 'Data Platform', emailinfra: 'Data Platform', importers: 'Data Platform',
+  agents: 'Autonomy',
+  security: 'Workspace', launch: 'Workspace', testing: 'Workspace', settings: 'Workspace',
 };
 
-function Topbar({ onMenu }: { onMenu: () => void }) {
+function Topbar({ onMenu, onAsk }: { onMenu: () => void; onAsk: () => void }) {
   const { s } = useApp();
   const can = useCanEdit();
   const t = TITLES[s.view];
@@ -446,6 +472,11 @@ function Topbar({ onMenu }: { onMenu: () => void }) {
         </p>
         <h1 className="truncate font-display text-[17.5px] font-bold leading-tight tracking-tight text-ink">{t.t}</h1>
       </div>
+      <button onClick={onAsk} title="Ask Cadence (⌘K)"
+        className="press hidden h-9 items-center gap-2 rounded-lg border border-line2 bg-card px-3 text-[12.5px] font-semibold text-ink shadow-hard-sm transition hover:border-moss/60 hover:text-pine md:flex">
+        <Icon name="orbit" size={15} className="text-ember" /> Ask Cadence
+        <kbd className="rounded border border-line bg-paper px-1 font-mono text-[9px] text-faint">⌘K</kbd>
+      </button>
       <SyncTicker />
       <SearchBox />
       {!can && <Pill color="#e86a17" tint="#ffe9d4" className="hidden md:inline-flex"><Icon name="eye" size={11} /> Read-only</Pill>}
@@ -497,6 +528,7 @@ export function Shell({ children }: { children: ReactNode }) {
   const { s, a } = useApp();
   const [mobileNav, setMobileNav] = useState(false);
   const [palette, setPalette] = useState(false);
+  const [copilot, setCopilot] = useState(false);
   const [help, setHelp] = useState(false);
   const sRef = useRef(s);
   sRef.current = s;
@@ -508,7 +540,7 @@ export function Shell({ children }: { children: ReactNode }) {
       const typing = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
-        setPalette(p => !p);
+        setCopilot(p => !p);
         return;
       }
       if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
@@ -532,7 +564,7 @@ export function Shell({ children }: { children: ReactNode }) {
     <div className="flex h-full overflow-hidden">
       <Sidebar mobileOpen={mobileNav} onClose={() => setMobileNav(false)} />
       <div className="flex min-w-0 flex-1 flex-col">
-        <Topbar onMenu={() => setMobileNav(true)} />
+        <Topbar onMenu={() => setMobileNav(true)} onAsk={() => setCopilot(true)} />
         <main className="bg-dots relative flex-1 overflow-y-auto">
           <div className="glow-top pointer-events-none absolute inset-x-0 top-0 h-72" />
           <div className="anim-drift pointer-events-none absolute -right-32 top-24 h-96 w-96 rounded-full bg-moss/6 blur-3xl" />
@@ -543,6 +575,7 @@ export function Shell({ children }: { children: ReactNode }) {
         </main>
       </div>
       <CommandPalette open={palette} onClose={() => setPalette(false)} />
+      <Copilot open={copilot} onClose={() => setCopilot(false)} />
       <ShortcutsHelp open={help} onClose={() => setHelp(false)} />
       <ToastHost />
     </div>

@@ -117,6 +117,18 @@ const P: Record<string, ReactNode> = {
   shield: <><path d="M12 22s8-3.6 8-9.8V5.2L12 2 4 5.2v7C4 18.4 12 22 12 22z" /><path d="m8.8 11.8 2.3 2.3 4.3-4.8" /></>,
   gauge: <><path d="M4 14.5a8 8 0 1 1 16 0" /><path d="M12 14.5 15.5 9" /><path d="M3.5 18.5h17" /></>,
   terminal: <><rect x="2.5" y="4" width="19" height="16" rx="2.2" /><path d="m6.5 9 3 3-3 3" /><path d="M12 15.5h5.5" /></>,
+  spark: <><path d="M12 3v4M12 17v4M3 12h4M17 12h4" /><path d="m12 8 1.2 2.8L16 12l-2.8 1.2L12 16l-1.2-2.8L8 12l2.8-1.2z" /></>,
+  key: <><circle cx="8" cy="14.5" r="4.5" /><path d="m11.5 11 8-8" /><path d="M17 5.5 19.5 8M14.5 8 16.5 10" /></>,
+  lock: <><rect x="4.5" y="10.5" width="15" height="10" rx="2.2" /><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7" /><path d="M12 14.5v2.5" /></>,
+  cpu: <><rect x="5.5" y="5.5" width="13" height="13" rx="2" /><rect x="9.5" y="9.5" width="5" height="5" rx="1" /><path d="M9 2.5v3M15 2.5v3M9 18.5v3M15 18.5v3M2.5 9h3M2.5 15h3M18.5 9h3M18.5 15h3" /></>,
+  orbit: <><circle cx="12" cy="12" r="3.2" /><path d="M20.3 8.6c1.6 2.7-.7 7-5.2 9.6s-9.4 2.6-11-.1 0.7-7 5.2-9.6 9.4-2.6 11 .1z" /></>,
+  coin: <><circle cx="12" cy="12" r="8.5" /><path d="M12 7.5v9M9.5 9.8c0-1.2 1.1-2 2.5-2s2.5.8 2.5 2-1 1.8-2.5 2.2-2.5 1-2.5 2.2 1.1 2 2.5 2 2.5-.8 2.5-2" /></>,
+  layers: <><path d="m12 3 9 5-9 5-9-5z" /><path d="m3 13 9 5 9-5" /><path d="m3 17 9 5 9-5" /></>,
+  laptop: <><rect x="4" y="5" width="16" height="11" rx="1.8" /><path d="M2 19.5h20" /></>,
+  smartphone: <><rect x="7.5" y="2.5" width="9" height="19" rx="2.2" /><path d="M11 18.5h2" /></>,
+  fingerprint: <><path d="M7 6.3A7.5 7.5 0 0 1 19.5 12c0 3-.4 5.5-1.2 7.5" /><path d="M4.6 9.5A7.6 7.6 0 0 0 4.5 12c0 3.5-.6 6-1 7" /><path d="M12 8.5A3.5 3.5 0 0 1 15.5 12c0 3.2-.4 6-1.3 8.3" /><path d="M8.5 12a3.5 3.5 0 0 1 .6-2" /><path d="M8.6 15.5c-.1 2-.5 3.8-1.1 5.3" /><path d="M12 12c0 3.4-.5 6.4-1.5 8.8" /></>,
+  history: <><path d="M3.5 12a8.5 8.5 0 1 1 2.5 6" /><path d="M3.5 12H7M3.5 12V8.5" /><path d="M12 7.5V12l3 2" /></>,
+  award: <><circle cx="12" cy="9" r="5.5" /><path d="m8.8 13.6-1.3 7 4.5-2.6 4.5 2.6-1.3-7" /></>,
 };
 
 export function Icon({ name, size = 17, className, sw = 1.8 }: { name: keyof typeof P | string; size?: number; className?: string; sw?: number }) {

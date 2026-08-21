@@ -4,7 +4,7 @@ import {
   cx, Icon, isoOf, monthMatrix, monthTitle, PLATFORM_IDS, PLATFORMS, PlatformIcon, STATUSES, STATUS_ICON, TODAY, weekOf, WEEKDAYS,
 } from '../meta';
 import type { Platform, Post, PostStatus } from '../types';
-import { Btn, Card, IconBtn, Modal, Pill, Seg } from '../components/ui';
+import { Btn, Card, IconBtn, Modal, Pill, Seg, Toggle } from '../components/ui';
 
 function PostChip({ p, onClick, wide }: { p: Post; onClick: () => void; wide?: boolean }) {
   const can = useCanEdit();
@@ -35,6 +35,51 @@ function PostChip({ p, onClick, wide }: { p: Post; onClick: () => void; wide?: b
         <Icon name={STATUS_ICON[p.status]} size={11} />
       </span>
     </button>
+  );
+}
+
+const SAMPLE_CSV = `date,time,platforms,text
+${isoOf(new Date(Date.now() + 864e5))},09:00,linkedin|instagram,Spring blend drops Friday — pre-orders open now
+${isoOf(new Date(Date.now() + 2 * 864e5))},12:30,x,Cold brew season is officially here. ☀️
+${isoOf(new Date(Date.now() + 3 * 864e5))},15:00,facebook|pinterest,Meet the farmers behind our newest single origin`;
+
+function BulkModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { a } = useApp();
+  const [csv, setCsv] = useState(SAMPLE_CSV);
+  const [err, setErr] = useState('');
+
+  const parsed = useMemo(() => {
+    const lines = csv.trim().split('\n').slice(1).filter(l => l.trim());
+    return lines.map(l => {
+      const [date, time, platforms, ...rest] = l.split(',');
+      return { date: date?.trim(), time: time?.trim() || '12:00', platforms: (platforms ?? '').split('|').map(p => p.trim()).filter(Boolean), text: rest.join(',').trim() };
+    }).filter(r => r.date && r.text);
+  }, [csv]);
+
+  const importRows = () => {
+    if (!parsed.length) { setErr('No valid rows — check the format: date,time,platforms,text'); return; }
+    parsed.forEach(r => a.addPost({
+      text: r.text,
+      platforms: (r.platforms.length ? r.platforms : ['linkedin']) as Platform[],
+      date: r.date, time: r.time, status: 'scheduled', author: 'Maya Chen', media: 'none', likes: 0, comments: 0, shares: 0,
+    }));
+    a.toast(`Scheduled ${parsed.length} posts from CSV`);
+    setErr('');
+    onClose();
+  };
+
+  return (
+    <Modal open={open} onClose={onClose} title="Bulk schedule from CSV" sub="One row per post. Columns: date, time, platforms (pipe-separated), text." w="max-w-2xl"
+      footer={<>
+        <Btn variant="ghost" onClick={() => setCsv(SAMPLE_CSV)}>Reset sample</Btn>
+        <Btn variant="outline" onClick={() => { const url = URL.createObjectURL(new Blob([SAMPLE_CSV], { type: 'text/csv' })); const el = document.createElement('a'); el.href = url; el.download = 'cadence-bulk-sample.csv'; el.click(); URL.revokeObjectURL(url); }}>Download template</Btn>
+        <Btn onClick={importRows}><Icon name="upload" size={13} /> Schedule {parsed.length || ''} posts</Btn>
+      </>}>
+      <textarea value={csv} onChange={e => setCsv(e.target.value)} rows={10} spellCheck={false}
+        className="w-full resize-none rounded-lg border border-line2 bg-night p-3 font-mono text-[11px] leading-relaxed text-lime outline-none focus:border-moss" />
+      {err && <p className="anim-shake mt-2 rounded-lg bg-dangerbg px-3 py-2 text-xs font-medium text-danger">{err}</p>}
+      <p className="mt-2 text-[10.5px] text-faint">Dates use YYYY-MM-DD. Invalid rows are skipped. Posts land as <span className="font-semibold text-ink2">scheduled</span> and appear on the calendar immediately.</p>
+    </Modal>
   );
 }
 
@@ -73,6 +118,8 @@ export function CalendarView() {
   const [plats, setPlats] = useState<Set<Platform>>(new Set(PLATFORM_IDS));
   const [status, setStatus] = useState<'all' | PostStatus>('all');
   const [overCell, setOverCell] = useState<string | null>(null);
+  const [twoWay, setTwoWay] = useState(true);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [dayModal, setDayModal] = useState<string | null>(null);
 
   const togglePlat = (p: Platform) => {
@@ -150,9 +197,22 @@ export function CalendarView() {
             <option value="all">All statuses</option>
             {Object.entries(STATUSES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
           </select>
+          <label className="flex items-center gap-2 rounded-lg border border-line bg-card px-2.5 py-1.5 text-[11px] font-semibold text-ink2" title="Push reschedules back to each platform and pull natively-scheduled posts in">
+            <span className={cx('flex items-center gap-1.5', twoWay ? 'text-pine' : 'text-mut')}>
+              <Icon name="refresh" size={13} /> Two-way sync
+            </span>
+            <Toggle on={twoWay} onChange={v => { setTwoWay(v); a.toast(v ? 'Native sync on — reschedules push to platforms, native posts appear here' : 'Native sync off — Cadence is now the only scheduler', v ? 'success' : 'warning'); }} />
+          </label>
+          <Btn variant="outline" onClick={() => setBulkOpen(true)}><Icon name="upload" size={14} /> Bulk CSV</Btn>
           <Btn onClick={() => a.openComposer()}><Icon name="plus" size={14} sw={2.4} /> New post</Btn>
         </div>
       </div>
+      {twoWay && (
+        <p className="anim-rise -mt-1 flex items-center gap-1.5 text-[10.5px] text-faint">
+          <span className="live-dot h-1.5 w-1.5 rounded-full bg-moss" />
+          Dragging a post reschedules it on LinkedIn/Instagram natively · posts scheduled in the native apps appear on this grid.
+        </p>
+      )}
 
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="mr-1 font-mono text-[9.5px] font-semibold uppercase tracking-[0.14em] text-mut">Platforms</span>
@@ -254,6 +314,7 @@ export function CalendarView() {
       </div>
 
       {dayModal && <DayModal iso={dayModal} onClose={() => setDayModal(null)} />}
+      <BulkModal open={bulkOpen} onClose={() => setBulkOpen(false)} />
     </div>
   );
 }

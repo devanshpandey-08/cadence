@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useRef } from 'react';
 import type { ReactNode } from 'react';
 import type {
-  AppState, Campaign, Contact, Deal, FormDef, Notif, PageDef, Post, Stage, Task, Thread, ToastMsg, User, View,
+  Agent, AgentApproval, ApiKeyDef, AppState, Asset, Campaign, Contact, Deal, DeviceSession, FormDef, Notif, PageDef, Post, SecuritySettings, Stage, Task, Thread, ToastMsg, User, View,
 } from './types';
 import confetti from 'canvas-confetti';
 import { authApi } from './services/backend';
@@ -18,6 +18,9 @@ export type Action =
   | { t: 'notif-read' }
   | { t: 'contact+'; c: Contact }
   | { t: 'contact~'; id: string; p: Partial<Contact> }
+  | { t: 'contact-'; id: string }
+  | { t: 'asset+'; asset: Asset }
+  | { t: 'asset-'; id: string }
   | { t: 'deal+'; dl: Deal }
   | { t: 'deal~'; id: string; p: Partial<Deal> }
   | { t: 'task+'; task: Task }
@@ -36,6 +39,15 @@ export type Action =
   | { t: 'user~'; id: string; p: Partial<User> }
   | { t: 'account~'; id: string; p: Partial<Contact & object> & object }
   | { t: 'import'; contacts: Contact[] }
+  | { t: 'agent~'; id: string; p: Partial<Agent> }
+  | { t: 'agent-act'; id: string; n: number }
+  | { t: 'appr+'; a: AgentApproval }
+  | { t: 'appr~'; id: string; p: Partial<AgentApproval> }
+  | { t: 'session-'; id: string }
+  | { t: 'apikey+'; k: ApiKeyDef }
+  | { t: 'apikey~'; id: string; p: Partial<ApiKeyDef> }
+  | { t: 'apikey-'; id: string }
+  | { t: 'sec~'; p: Partial<SecuritySettings> }
   | { t: 'reset' };
 
 export function reducer(s: AppState, a: Action): AppState {
@@ -47,6 +59,9 @@ export function reducer(s: AppState, a: Action): AppState {
     case 'notif-read': return { ...s, notifs: s.notifs.map(n => ({ ...n, read: true })) };
     case 'contact+': return { ...s, contacts: [a.c, ...s.contacts] };
     case 'contact~': return { ...s, contacts: s.contacts.map(c => c.id === a.id ? { ...c, ...a.p } : c) };
+    case 'contact-': return { ...s, contacts: s.contacts.filter(c => c.id !== a.id) };
+    case 'asset+': return { ...s, assets: [a.asset, ...s.assets] };
+    case 'asset-': return { ...s, assets: s.assets.filter(x => x.id !== a.id) };
     case 'deal+': return { ...s, deals: [a.dl, ...s.deals] };
     case 'deal~': return { ...s, deals: s.deals.map(dl => dl.id === a.id ? { ...dl, ...a.p } : dl) };
     case 'task+': return { ...s, tasks: [a.task, ...s.tasks] };
@@ -64,19 +79,61 @@ export function reducer(s: AppState, a: Action): AppState {
     case 'user+': return { ...s, users: [...s.users, a.u] };
     case 'user~': return { ...s, users: s.users.map(u => u.id === a.id ? { ...u, ...a.p } : u) };
     case 'account~': return { ...s, accounts: s.accounts.map(ac => ac.id === a.id ? { ...ac, ...a.p } : ac) };
-    case 'import': return { ...s, contacts: [...a.contacts, ...s.contacts] };
+    case 'agent~': return { ...s, agents: s.agents.map(ag => ag.id === a.id ? { ...ag, ...a.p } : ag) };
+    case 'agent-act': return { ...s, agents: s.agents.map(ag => ag.id === a.id ? { ...ag, actions: ag.actions + a.n, status: Math.random() < 0.5 ? 'working' : ag.status } : ag) };
+    case 'appr+': return { ...s, approvals: [a.a, ...s.approvals] };
+    case 'appr~': return { ...s, approvals: s.approvals.map(ap => ap.id === a.id ? { ...ap, ...a.p } : ap) };
+    case 'session-': return { ...s, sessions: s.sessions.filter(x => x.id !== a.id) };
+    case 'apikey+': return { ...s, apiKeys: [a.k, ...s.apiKeys] };
+    case 'apikey~': return { ...s, apiKeys: s.apiKeys.map(k => k.id === a.id ? { ...k, ...a.p } : k) };
+    case 'apikey-': return { ...s, apiKeys: s.apiKeys.filter(k => k.id !== a.id) };
+    case 'sec~': return { ...s, security: { ...s.security, ...a.p } };
+    case 'import': {
+      // Dedupe by email (case-insensitive) and MERGE — never create a duplicate
+      // person. On a match we keep the existing record (stable id), union tags,
+      // and fold the imported timeline in front of the existing one.
+      const byEmail = new Map<string, Contact>();
+      for (const c of s.contacts) byEmail.set(c.email.toLowerCase(), c);
+      const replacements = new Map<string, Contact>(); // existingId -> merged
+      const fresh: Contact[] = [];
+      for (const inc of a.contacts) {
+        const key = inc.email.toLowerCase();
+        const hit = byEmail.get(key);
+        if (hit) {
+          const merged: Contact = {
+            ...hit,
+            tags: Array.from(new Set([...hit.tags, ...inc.tags])),
+            timeline: [...inc.timeline, ...hit.timeline],
+            createdAt: inc.createdAt < hit.createdAt ? inc.createdAt : hit.createdAt,
+          };
+          byEmail.set(key, merged);
+          replacements.set(hit.id, merged);
+        } else {
+          byEmail.set(key, inc);
+          fresh.push(inc);
+        }
+      }
+      const applyMerges = (c: Contact) => replacements.get(c.id) ?? c;
+      return { ...s, contacts: [...fresh.map(applyMerges), ...s.contacts.map(applyMerges)] };
+    }
     case 'reset': return seedState();
     default: return s;
   }
 }
 
-/** Parses a persisted payload; returns null when corrupt, versioned-out, or empty. */
+/**
+ * Parses a persisted payload; returns null when corrupt, versioned-out, or empty.
+ *
+ * Migration-safe: seed defaults are spread UNDER the stored data, so any key a
+ * newer schema added (e.g. `assets`) is back-filled for older workspaces instead
+ * of arriving as `undefined` and crashing a screen. Stored keys always win.
+ */
 export function parsePersisted(raw: string | null): AppState | null {
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
     if (parsed && parsed.version === 2 && parsed.data && Array.isArray(parsed.data.contacts)) {
-      return { ...parsed.data } as AppState;
+      return { ...seedState(), ...parsed.data } as AppState;
     }
     return null;
   } catch {
@@ -98,12 +155,15 @@ export interface Api {
   ui: (p: Partial<AppState>) => void;
   openContact: (id: string) => void;
   openDeal: (id: string) => void;
-  openComposer: (p?: { postId?: string; date?: string }) => void;
+  openComposer: (p?: { postId?: string; date?: string; attachment?: import('./types').MediaAttachment }) => void;
   closeComposer: () => void;
   toast: (text: string, kind?: ToastMsg['kind']) => void;
   notify: (text: string, kind?: Notif['kind']) => void;
   addContact: (c: Omit<Contact, 'id' | 'createdAt' | 'lastActivity' | 'timeline'>) => string;
   patchContact: (id: string, p: Partial<Contact>) => void;
+  removeContact: (id: string) => void;
+  addAsset: (a: Asset) => void;
+  removeAsset: (id: string) => void;
   logActivity: (contactId: string, type: Contact['timeline'][number]['type'], text: string) => void;
   addDeal: (dl: Omit<Deal, 'id' | 'created' | 'notes'>) => void;
   patchDeal: (id: string, p: Partial<Deal>) => void;
@@ -125,7 +185,14 @@ export interface Api {
   patchUser: (id: string, p: Partial<User>) => void;
   addUser: (name: string, email: string, role: User['role']) => void;
   patchAccount: (id: string, p: { connected: boolean }) => void;
-  importContacts: (list: Contact[]) => void;
+  importContacts: (list: Contact[]) => { added: number; merged: number };
+  setAgentTier: (id: string, tier: Agent['tier']) => void;
+  decideApproval: (id: string, ok: boolean) => void;
+  revokeSession: (id: string) => void;
+  setSecurity: (p: Partial<SecuritySettings>) => void;
+  rotateApiKey: (id: string) => void;
+  addApiKey: (label: string, scopes: string[]) => void;
+  removeApiKey: (id: string) => void;
   reset: () => void;
   login: (userId: string, remember: boolean) => void;
   logout: () => void;
@@ -187,8 +254,14 @@ export function makeApi(deps: ApiDeps): Api {
       toast(`${c.name} added to contacts`);
       return id;
     },
-    patchContact: (id, p) => { if (requireEdit()) dispatch({ t: 'contact~', id, p }); },
-    logActivity: (contactId, type, text) => {
+      patchContact: (id, p) => { if (requireEdit()) dispatch({ t: 'contact~', id, p }); },
+      removeContact: id => {
+        if (!requireEdit()) return;
+        dispatch({ t: 'contact-', id });
+        toast('Contact deleted (GDPR right to erasure)', 'warning');
+      },
+      addAsset: asset => { if (requireEdit()) dispatch({ t: 'asset+', asset }); },
+      removeAsset: id => { if (requireEdit()) dispatch({ t: 'asset-', id }); },    logActivity: (contactId, type, text) => {
       if (!requireEdit()) return;
       const today = isoOf(new Date());
       const c = get().contacts.find(x => x.id === contactId);
@@ -318,10 +391,64 @@ export function makeApi(deps: ApiDeps): Api {
     patchAccount: (id, p) => { if (requireEdit()) dispatch({ t: 'account~', id, p }); },
 
     importContacts: list => {
-      if (!requireEdit()) return;
+      // Truthful accounting: compute the dedupe outcome BEFORE dispatching.
+      const existing = new Set(get().contacts.map((c: Contact) => c.email.toLowerCase()));
+      let merged = 0;
+      for (const c of list) {
+        if (existing.has(c.email.toLowerCase())) merged += 1;
+        else existing.add(c.email.toLowerCase());
+      }
+      const added = list.length - merged;
+      if (!requireEdit()) return { added, merged };
       dispatch({ t: 'import', contacts: list });
-      notify(`HubSpot import finished — ${list.length} contacts added`, 'import');
-      toast(`Import complete — ${list.length} contacts added`);
+      notify(`Import finished — ${added.toLocaleString()} new, ${merged.toLocaleString()} merged (deduped)`, 'import');
+      toast(`Import complete — ${added.toLocaleString()} added · ${merged.toLocaleString()} merged, 0 duplicates`);
+      return { added, merged };
+    },
+
+    /* ---------- agent fleet (admin/editor only) ---------- */
+    setAgentTier: (id, tier) => {
+      if (!requireEdit()) return;
+      const ag = get().agents.find(x => x.id === id);
+      dispatch({ t: 'agent~', id, p: { tier } });
+      if (ag) toast(`${ag.name} → ${tier === 'autonomous' ? 'Autonomous (acts, then reports)' : tier === 'copilot' ? 'Co-pilot (drafts for review)' : 'Supervised (asks first)'}`, 'info');
+    },
+    decideApproval: (id, ok) => {
+      if (!requireEdit()) return;
+      const ap = get().approvals.find(x => x.id === id);
+      dispatch({ t: 'appr~', id, p: { status: ok ? 'approved' : 'rejected' } });
+      if (ap) toast(ok ? `Approved — ${ap.agent} will proceed` : `Rejected — ${ap.agent} stood down`, ok ? 'success' : 'warning');
+    },
+
+    /* ---------- security & sessions (admin only) ---------- */
+    revokeSession: id => {
+      if (!requireAdmin()) return;
+      const sess = get().sessions.find(x => x.id === id);
+      if (sess?.current) { toast('You cannot revoke your current session', 'warning'); return; }
+      dispatch({ t: 'session-', id });
+      toast(`Session revoked — ${sess?.device ?? 'device'} signed out`, 'warning');
+    },
+    setSecurity: p => {
+      if (!requireAdmin()) return;
+      dispatch({ t: 'sec~', p });
+      if (p.mfa !== undefined) toast(p.mfa ? 'Multi-factor authentication enabled' : 'MFA disabled — not recommended', p.mfa ? 'success' : 'warning');
+    },
+    rotateApiKey: id => {
+      if (!requireAdmin()) return;
+      const k = get().apiKeys.find(x => x.id === id);
+      const prefix = 'cad_live_' + Math.random().toString(36).slice(2, 6);
+      dispatch({ t: 'apikey~', id, p: { prefix, lastUsed: 'never' } });
+      toast(`Rotated ${k?.label ?? 'key'} — old secret revoked immediately`, 'warning');
+    },
+    addApiKey: (label, scopes) => {
+      if (!requireAdmin()) return;
+      dispatch({ t: 'apikey+', k: { id: uid(), label, prefix: 'cad_live_' + Math.random().toString(36).slice(2, 6), scopes, created: isoOf(new Date()), lastUsed: 'never' } });
+      toast(`API key "${label}" created — copy the secret now`, 'success');
+    },
+    removeApiKey: id => {
+      if (!requireAdmin()) return;
+      dispatch({ t: 'apikey-', id });
+      toast('API key revoked', 'warning');
     },
 
     reset: () => {
@@ -450,6 +577,37 @@ export function AppProvider({ children }: { children: ReactNode }) {
         push(`New lead: ${name} via "${form?.name ?? 'your form'}"`, 'auto');
       }
     }, 24000);
+    return () => window.clearInterval(t);
+  }, [dispatch]);
+
+  /* ---------- agent fleet heartbeat ----------
+     Autonomous agents accrue operations continuously and occasionally surface a
+     human-in-the-loop approval. Mirrors the production worker → approval queue. */
+  useEffect(() => {
+    const APPR: Array<Omit<AgentApproval, 'id' | 'at' | 'status'>> = [
+      { agent: 'Bid Sentinel', action: 'Shift $1,100 Meta → LinkedIn', detail: 'LinkedIn CPL down 22% WoW. Low risk, reversible in 24h.', risk: 'low' },
+      { agent: 'Inbox Agent', action: 'Reply to 4 pricing questions', detail: 'Drafted from saved replies. Confidence 0.88–0.95.', risk: 'low' },
+      { agent: 'Audience Scout', action: 'Suppress 86 bounced emails', detail: 'Hard bounces detected. Protects sender reputation.', risk: 'med' },
+      { agent: 'Anomaly Sentinel', action: 'Throttle TikTok spend 30%', detail: 'Frequency capped at 4.2 — creative fatigue likely.', risk: 'med' },
+      { agent: 'Commerce Agent', action: 'Send 23 cart-recovery emails', detail: '18h abandonment window, consented subscribers only.', risk: 'low' },
+    ];
+    const t = window.setInterval(() => {
+      if (document.visibilityState === 'hidden') return;
+      const st = ref.current;
+      if (!st.me || st.agents.length === 0) return;
+      // accrue actions on 1-3 random agents
+      const n = 1 + Math.floor(Math.random() * 3);
+      for (let i = 0; i < n; i++) {
+        const ag = st.agents[Math.floor(Math.random() * st.agents.length)];
+        dispatch({ t: 'agent-act', id: ag.id, n: 1 + Math.floor(Math.random() * 6) });
+      }
+      // ~30% chance: surface a pending approval
+      if (Math.random() < 0.3 && st.approvals.filter(x => x.status === 'pending').length < 5) {
+        const c = APPR[Math.floor(Math.random() * APPR.length)];
+        dispatch({ t: 'appr+', a: { ...c, id: uid(), at: isoOf(new Date()), status: 'pending' } });
+        dispatch({ t: 'notif+', n: { id: uid(), text: `${c.agent} requests approval: ${c.action}`, at: isoOf(new Date()), read: false, kind: 'approval' } });
+      }
+    }, 15000);
     return () => window.clearInterval(t);
   }, [dispatch]);
 

@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '../store';
 import { cx, Icon, money } from '../meta';
-import { Card, Pill, SectionTitle, Seg } from '../components/ui';
+import { Card, Pill, SectionTitle, Seg, Toggle } from '../components/ui';
 
 type Channel = 'Organic' | 'Paid social' | 'Email' | 'LinkedIn' | 'Instagram' | 'Referral';
 type Model = 'first' | 'last' | 'linear' | 'decay' | 'position';
@@ -50,9 +50,21 @@ function weights(j: Journey, m: Model): number[] {
 }
 
 export function Attribution() {
-  const { s } = useApp();
+  const { s, a } = useApp();
   const [model, setModel] = useState<Model>('position');
   const wonRevenue = s.deals.filter(d => d.stage === 'won').reduce((n, d) => n + d.value, 0);
+
+  /* attribution-triggered automations — react to a conversion path, not just a field change */
+  const [autoRules, setAutoRules] = useState([
+    { id: 'ar1', trigger: 'First touch from Paid social', action: 'Add tag "paid-lead" + notify owner', on: true, fired: 41 },
+    { id: 'ar2', trigger: 'Path includes 3+ Email touches', action: 'Enroll in "nurture-fast" drip', on: true, fired: 18 },
+    { id: 'ar3', trigger: 'Deal won, last touch = Referral', action: 'Create task "Ask for a review"', on: false, fired: 6 },
+  ]);
+  const toggleRule = (id: string) => {
+    setAutoRules(rs => rs.map(r => r.id === id ? { ...r, on: !r.on } : r));
+    const r = autoRules.find(x => x.id === id);
+    if (r) a.toast(r.on ? `Rule paused: ${r.trigger}` : `Rule armed: ${r.trigger}`, r.on ? 'info' : 'success');
+  };
 
   const credited = useMemo(() => {
     const per: Record<Channel, { credit: number; value: number; touches: number }> =
@@ -175,6 +187,33 @@ export function Attribution() {
           </Card>
         </div>
       </div>
+
+      {/* attribution-triggered automations */}
+      <Card className="p-4">
+        <SectionTitle right={<Pill color="#e2618f" tint="#f3dde5" dot>{autoRules.filter(r => r.on).length} armed · fired {autoRules.reduce((n, r) => n + r.fired, 0)}× / 30d</Pill>}>
+          Attribution-triggered automations
+        </SectionTitle>
+        <p className="mb-3 max-w-[680px] text-[11.5px] leading-relaxed text-mut">
+          Normal automations fire on a field change. These fire when the <span className="font-semibold text-ink">attribution engine resolves a conversion path</span> — so you can react to where a customer actually came from, not just what they did.
+        </p>
+        <div className="grid grid-cols-1 gap-2.5 lg:grid-cols-3">
+          {autoRules.map(r => (
+            <div key={r.id} className={cx('rounded-lg border p-3 transition', r.on ? 'border-line bg-paper/40' : 'border-dashed border-line2 bg-transparent opacity-70')}>
+              <div className="flex items-start justify-between gap-2">
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-mint text-pine"><Icon name="bolt" size={14} /></span>
+                <Toggle on={r.on} onChange={() => toggleRule(r.id)} />
+              </div>
+              <p className="mt-2 text-[11px] font-semibold text-ink2">When: <span className="font-mono text-[10px] text-moss">{r.trigger}</span></p>
+              <p className="mt-1 text-[11px] text-mut">Then: <span className="font-semibold text-ink2">{r.action}</span></p>
+              <p className="tnum mt-2 font-mono text-[9px] uppercase tracking-wider text-faint">fired {r.fired}× last 30d</p>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 flex items-start gap-1.5 rounded-lg bg-paper/70 px-3 py-2 text-[10.5px] leading-relaxed text-mut">
+          <Icon name="bolt" size={12} className="mt-0.5 shrink-0 text-ember" />
+          Triggers read the same journey log that powers the attribution models above — switch the model and the firing logic follows.
+        </p>
+      </Card>
     </div>
   );
 }

@@ -9,7 +9,7 @@ export type ReqTag =
   | 'forms' | 'pages' | 'email' | 'approvals' | 'inbox' | 'scheduler' | 'roles'
   | 'security' | 'resilience' | 'scale' | 'api'
   | 'integration' | 'e2e' | 'hardening' | 'chaos' | 'fuzz' | 'edge' | 'regression'
-  | 'smoke' | 'contracts' | 'persist' | 'purity' | 'flood';
+  | 'smoke' | 'contracts' | 'persist' | 'purity' | 'flood' | 'prodverify';
 
 export interface TestResult {
   id: string;

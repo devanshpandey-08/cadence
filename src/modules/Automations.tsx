@@ -76,6 +76,78 @@ function StepCard({ step, onRemove, last }: { step: Step; onRemove: () => void; 
   );
 }
 
+/* ---------- sales cadences (Outreach-style multi-channel) ---------- */
+interface Cadence { id: string; name: string; steps: { day: number; channel: 'email' | 'call' | 'linkedin' | 'task'; note: string }[]; enrolled: number; paused: boolean; }
+const CADENCE_SEED: Cadence[] = [
+  { id: 'cd1', name: 'Wholesale outbound', enrolled: 34, paused: false, steps: [
+    { day: 0, channel: 'email', note: 'Intro + wholesale deck' },
+    { day: 2, channel: 'linkedin', note: 'Connect + short note' },
+    { day: 4, channel: 'call', note: 'Discovery call attempt' },
+    { day: 7, channel: 'email', note: 'Case study: Café Astra' },
+    { day: 10, channel: 'task', note: 'Owner: decide — continue or archive' },
+  ]},
+  { id: 'cd2', name: 'Trial activation', enrolled: 58, paused: false, steps: [
+    { day: 0, channel: 'email', note: 'Welcome + quick-start guide' },
+    { day: 1, channel: 'task', note: 'Check: did they schedule a post?' },
+    { day: 3, channel: 'email', note: 'Template pack + video walkthrough' },
+    { day: 6, channel: 'call', note: 'Offer a 15-min onboarding call' },
+  ]},
+];
+const CH_META: Record<Cadence['steps'][number]['channel'], { icon: string; color: string; label: string }> = {
+  email: { icon: 'mail', color: '#e86a17', label: 'Email' },
+  call: { icon: 'phone', color: '#3d6bff', label: 'Call' },
+  linkedin: { icon: 'users', color: '#0a66c2', label: 'LinkedIn' },
+  task: { icon: 'checksq', color: '#2e9e4f', label: 'Task' },
+};
+
+function SalesCadences() {
+  const { a } = useApp();
+  const [cads, setCads] = useState<Cadence[]>(CADENCE_SEED);
+  return (
+    <div className="mt-5">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h2 className="font-display text-[19px] font-bold tracking-tight text-ink">Sales cadences</h2>
+          <p className="text-[11.5px] text-mut">Multi-channel outbound sequences — email, call, LinkedIn and tasks on a day-based track.</p>
+        </div>
+        <Pill color="#3d6bff" tint="#e3eaff" dot>{cads.reduce((n, c) => n + c.enrolled, 0)} enrolled</Pill>
+      </div>
+      <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-2">
+        {cads.map(cd => (
+          <Card key={cd.id} className="p-4" hover>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <p className="text-[13.5px] font-bold text-ink">{cd.name}</p>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[9.5px] uppercase tracking-wider text-mut">{cd.paused ? 'Paused' : 'Running'}</span>
+                <Toggle on={!cd.paused} onChange={v => { setCads(cs => cs.map(x => x.id === cd.id ? { ...x, paused: !v } : x)); a.toast(v ? `"${cd.name}" resumed` : `"${cd.name}" paused`, v ? 'success' : 'warning'); }} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              {cd.steps.map((st, i) => {
+                const m = CH_META[st.channel];
+                return (
+                  <div key={i} className="flex items-center gap-2.5 rounded-lg border border-line bg-paper/40 px-2.5 py-1.5">
+                    <span className="tnum w-12 shrink-0 font-mono text-[9.5px] font-bold text-faint">Day {st.day}</span>
+                    <span className="grid h-6 w-6 shrink-0 place-items-center rounded-md" style={{ background: m.color + '1c', color: m.color }}><Icon name={m.icon} size={12} /></span>
+                    <span className="w-16 shrink-0 text-[10.5px] font-bold" style={{ color: m.color }}>{m.label}</span>
+                    <span className="min-w-0 flex-1 truncate text-[11px] text-ink2">{st.note}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="mt-3 flex items-center justify-between">
+              <span className="tnum font-mono text-[10px] text-mut">{cd.enrolled} contacts in flight · exit on reply or meeting</span>
+              <Btn size="sm" variant="outline" onClick={() => { setCads(cs => cs.map(x => x.id === cd.id ? { ...x, enrolled: x.enrolled + 1 } : x)); a.toast('Contact enrolled — Day 0 email queued', 'info'); }}>
+                <Icon name="plus" size={12} /> Enroll contact
+              </Btn>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function Automations() {
   const { a } = useApp();
   const [seqs, setSeqs] = useState<Sequence[]>(SEED);
@@ -206,6 +278,8 @@ export function Automations() {
           </p>
         </Card>
       </div>
+
+      <SalesCadences />
     </div>
   );
 }

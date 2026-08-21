@@ -206,11 +206,17 @@ const crm: Suite = {
       eq(env.getState().posts.length, before - 1, 'count -1');
       assert(!env.getState().posts.some(p => p.id === id), 'gone');
     }),
-    T('c11', 'importContacts prepends a batch and notifies', 'api', env => {
+    T('c11', 'importContacts merges with dedupe and reports truthful accounting', 'api', env => {
       const batch = syntheticContacts(5);
       env.api.importContacts(batch);
-      eq(env.getState().contacts[0].id, 'syn-0', 'prepended');
-      assert(env.notifs.some(n => n.includes('import finished')), 'import notification');
+      // dedupe-by-email: the 5 fresh rows land; the notification must carry the added/merged split
+      assert(env.notifs.some(n => n.includes('merged') && n.includes('deduped')), 'notification reports dedupe accounting');
+      // re-importing the same batch adds nothing new
+      const before = env.getState().contacts.length;
+      const res = env.api.importContacts(batch);
+      eq(env.getState().contacts.length, before, 'no duplicate rows on re-import');
+      eq(res.added, 0, 'second pass reports 0 added');
+      eq(res.merged, 5, 'second pass reports 5 merged');
     }),
   ],
 };
@@ -493,6 +499,7 @@ export const REQ_LABEL: Record<string, { label: string; spec: string }> = {
   persist: { label: 'Persistence corruption fuzz', spec: 'Every path' },
   purity: { label: 'Reducer purity', spec: 'Every path' },
   flood: { label: 'Flood endurance', spec: 'Every path' },
+  prodverify: { label: 'Production verification', spec: 'Every path' },
 };
 
 export async function runOne(def: Suite['tests'][number]) {

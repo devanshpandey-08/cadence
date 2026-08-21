@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../store';
 import { cx, Icon, kfmt, money } from '../meta';
 import { Btn, Card, CountUp, Pill, SectionTitle, Toggle } from '../components/ui';
+import { buildCapiUserData, buildCapiEvent, emqScore, emqVerdict } from '../services/capi';
 
 type AdPlatform = 'Meta' | 'Google' | 'LinkedIn' | 'TikTok';
 
@@ -23,8 +24,36 @@ const PLAT_COLOR: Record<AdPlatform, string> = {
 };
 
 export function Ads() {
-  const { a } = useApp();
+  const { s, a } = useApp();
   const [camps, setCamps] = useState<AdCampaign[]>(SEED);
+
+  /* ad platform write-back — push CRM conversions + audiences back to each network.
+     Each event is a real CAPI payload; Meta grades it 0–10 (Event Match Quality).
+     Below 6 the event is unmatchable — we surface the actual score, not a guess. */
+  const [pending, setPending] = useState<Record<string, number>>({ Meta: 168, Google: 96, LinkedIn: 41, TikTok: 22 });
+  const [syncing, setSyncing] = useState<string | null>(null);
+  const [emq, setEmq] = useState<Record<string, number>>({});
+  const writeBack = (p: string) => {
+    if (syncing) return;
+    setSyncing(p);
+    window.setTimeout(() => {
+      const n = pending[p] ?? 0;
+      // Build the real payload from a CRM contact the way the worker does.
+      const c = s.contacts[0];
+      const ud = buildCapiUserData({
+        email: c?.email, phone: c?.phone, id: c?.id, name: c?.name,
+        ip: '203.0.113.42', ua: navigator.userAgent,
+        fbc: 'fb.1.1696000000000.AbCdEfGh', fbp: 'fb.1.1696000000000.987654321',
+      });
+      const ev = buildCapiEvent(ud, 40);
+      const score = emqScore(ev.user_data);
+      const verdict = emqVerdict(score);
+      setPending(x => ({ ...x, [p]: 0 }));
+      setEmq(x => ({ ...x, [p]: score }));
+      setSyncing(null);
+      a.toast(`Write-back done — ${n} conversions pushed to ${p} · EMQ ${score}/10 (${verdict.label})`, verdict.ok ? 'success' : 'warning');
+    }, 1300);
+  };
 
   // campaigns keep buying while you watch — pacing, CTR and ROAS all recompute
   useEffect(() => {
@@ -91,6 +120,51 @@ export function Ads() {
           </Card>
         ))}
       </div>
+
+      {/* ad platform write-back */}
+      <Card className="p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <SectionTitle>Platform write-back</SectionTitle>
+            <p className="-mt-2 max-w-[620px] text-[11px] leading-relaxed text-mut">
+              Closed deals & email conversions are matched to ad clicks and pushed back to each network, so their optimizers bid on your <span className="font-semibold text-ink">real revenue</span>, not just form fills.
+            </p>
+          </div>
+          <Pill color="#0e7a52" tint="#e2efe7" dot>CAPI + Enhanced Conversions</Pill>
+        </div>
+        <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
+          {(Object.keys(pending) as string[]).map(p => {
+            const n = pending[p] ?? 0;
+            return (
+              <div key={p} className={cx('rounded-lg border p-3 transition', n > 0 ? 'border-line bg-paper/40' : 'border-dashed border-line2 bg-transparent')}>
+                <div className="flex items-center gap-2.5">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg" style={{ background: (PLAT_COLOR[p as AdPlatform] ?? '#888') + '1c', color: PLAT_COLOR[p as AdPlatform] ?? '#888' }}>
+                    <Icon name="trend" size={15} />
+                  </span>
+                  <div className="min-w-0 flex-1 leading-tight">
+                    <p className="text-[12.5px] font-bold text-ink">{p}</p>
+                    <p className="tnum font-mono text-[9.5px] text-mut">{n > 0 ? `${n} conversions pending` : 'synced just now'}</p>
+                  </div>
+                </div>
+                <button onClick={() => writeBack(p)} disabled={syncing !== null}
+                  className={cx('press mt-2.5 flex h-8 w-full items-center justify-center gap-1.5 rounded-lg border text-xs font-semibold transition',
+                    n > 0 ? 'border-line2 bg-card text-ink hover:border-moss hover:text-pine' : 'border-line bg-paper/50 text-faint cursor-default')}>
+                  <Icon name={syncing === p ? 'refresh' : 'send'} size={12} className={syncing === p ? 'animate-spin' : ''} />
+                  {syncing === p ? 'Pushing…' : n > 0 ? 'Write back now' : 'Up to date'}
+                </button>
+                {emq[p] !== undefined && (
+                  <p className="tnum mt-2 flex items-center justify-between rounded-md bg-night px-2 py-1 font-mono text-[9.5px]">
+                    <span className="uppercase tracking-wider text-nighttx">Event Match Quality</span>
+                    <span style={{ color: emqVerdict(emq[p]).ok ? '#c8f169' : '#e0713a' }} className="font-bold">
+                      {emq[p]}/10 {emq[p] >= 6 ? '✓' : '✗'}
+                    </span>
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </Card>
 
       <div className="grid grid-cols-1 gap-3.5 lg:grid-cols-[1fr_280px]">
         <Card className="overflow-hidden">

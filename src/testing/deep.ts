@@ -17,10 +17,13 @@ import type { ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import type { Suite, TestDef, TestEnv } from './framework';
-import { assert, budget, createEnv, eq } from './framework';
+import { assert, budget, createEnv, eq, measure } from './framework';
 import { AppProvider, parsePersisted, reducer } from '../store';
 import { seedState } from '../data';
 import { isoOf, monthMatrix, pad, PLATFORMS, PLATFORM_IDS, STATUSES, STATUS_ICON, STAGES, WEEKDAYS, weekOf } from '../meta';
+import { buildCapiUserData, emqScore } from '../services/capi';
+import { readImageFile, videoEmbedSrc, MAX_CAROUSEL } from '../components/MediaUpload';
+import type { Contact } from '../types';
 
 import { Dashboard } from '../modules/Dashboard';
 import { Contacts } from '../modules/Contacts';
@@ -30,6 +33,7 @@ import { Inbox } from '../modules/Inbox';
 import { Tasks } from '../modules/Tasks';
 import { Campaigns } from '../modules/Campaigns';
 import { Marketing } from '../modules/Marketing';
+import { Assets } from '../modules/Assets';
 import { AIStudio } from '../modules/AIStudio';
 import { Automations } from '../modules/Automations';
 import { Listening } from '../modules/Listening';
@@ -41,6 +45,9 @@ import { Attribution } from '../modules/Attribution';
 import { Conversations } from '../modules/Conversations';
 import { WebAnalytics } from '../modules/WebAnalytics';
 import { Seo } from '../modules/Seo';
+import { Cdp } from '../modules/Cdp';
+import { EmailInfra } from '../modules/EmailInfra';
+import { Importers } from '../modules/Importers';
 import { Launch } from '../modules/Launch';
 import { Settings } from '../modules/Settings';
 import { Login } from '../components/Login';
@@ -96,21 +103,25 @@ const smokeSuite: Suite = {
         ['Marketing', () => createElement(Marketing)],
       ]))),
     T('sm2', 'growth + intelligence screens mount and render DOM', 'smoke', () =>
-      budget('5 screens', 4000, () => smoke('growth', [
+      budget('6 screens', 4500, () => smoke('growth', [
+        ['Assets', () => createElement(Assets)],
         ['AI Studio', () => createElement(AIStudio)],
         ['Automations', () => createElement(Automations)],
         ['Listening', () => createElement(Listening)],
         ['Calls', () => createElement(Calls)],
         ['Ads', () => createElement(Ads)],
       ]))),
-    T('sm3', 'insights + reach + workspace screens mount and render DOM', 'smoke', () =>
-      budget('8 screens', 4000, () => smoke('reach', [
+    T('sm3', 'insights + reach + data-platform + workspace screens mount and render DOM', 'smoke', () =>
+      budget('11 screens', 6000, () => smoke('reach', [
         ['Insights', () => createElement(Insights)],
         ['Experiments', () => createElement(Experiments)],
         ['Attribution', () => createElement(Attribution)],
         ['Conversations', () => createElement(Conversations)],
         ['Web analytics', () => createElement(WebAnalytics)],
         ['SEO', () => createElement(Seo)],
+        ['CDP · identity & events', () => createElement(Cdp)],
+        ['Email infra', () => createElement(EmailInfra)],
+        ['Importers', () => createElement(Importers)],
         ['Launch console', () => createElement(Launch)],
         ['Settings', () => createElement(Settings)],
       ]))),
@@ -347,7 +358,120 @@ const floodSuite: Suite = {
   ],
 };
 
-export const DEEP_SUITES: Suite[] = [smokeSuite, contractsSuite, calendarSuite, persistSuite, puritySuite, floodSuite];
+/* ================= S20 · production verification =================
+   The four claims that turn a demo into a product, made executable:
+   1) 10k-contact import lands with ZERO duplicates (dedupe is real).
+   2) CAPI write-back clears Meta's Event Match Quality bar (>=6/10).
+   3) The event stream ingests 1,000 events/sec with 0 drops.
+   4) The suite itself can't be silently shrunk (no disabled tests). */
+const prodSuite: Suite = {
+  id: 's20', name: 'Production verification', icon: 'shield', tone: '#0e7a52',
+  blurb: 'The claims that matter, proven against the real store — not asserted in copy.',
+  tests: [
+    T('pv1', '10,000-contact import lands with zero duplicates', 'prodverify', env => {
+      // 10,000 rows but only 8,500 unique emails — rows 8,500–9,999 deliberately
+      // repeat earlier addresses (the exact shape of a messy HubSpot export).
+      const N = 10000, UNIQUE = 8500;
+      const today = isoOf(new Date());
+      const batch: Contact[] = Array.from({ length: N }, (_, i) => ({
+        id: `pv-${i}`, name: `PV Contact ${i}`, email: `pv${i % UNIQUE}@load.test`,
+        company: `PVCo ${i % 97}`, title: 'Analyst', source: 'Import', tags: ['migrated'],
+        owner: 'Maya Chen', createdAt: today, lastActivity: today,
+        timeline: [{ id: `tl-${i}`, type: 'note', text: 'migrated', at: today }],
+      }));
+      const before = env.getState().contacts.length;
+      const res = budget('10k dedupe import', 2000, () => { env.api.importContacts(batch); });
+      const after = env.getState().contacts;
+      eq(after.length, before + UNIQUE, `only the ${UNIQUE} unique people were added`);
+      const emails = after.map(c => c.email.toLowerCase());
+      eq(new Set(emails).size, emails.length, 'no duplicate emails exist after import');
+      assert(res.metric.value !== undefined, 'import completed inside budget');
+      return res;
+    }),
+    T('pv2', 'CAPI write-back clears Meta Event Match Quality (≥6/10)', 'prodverify', () => {
+      // A real CRM conversion carries hashed email + phone + external_id + the
+      // cookie pair + ip/ua — that must clear Meta's usability bar.
+      const rich = buildCapiUserData({
+        email: 'INGRID@FjordCoffee.com ', phone: '+1 (503) 555-0142', id: 'c-9f21',
+        name: 'Ingrid Halvorsen', ip: '203.0.113.42', ua: 'Mozilla/5.0 (Macintosh)',
+        fbc: 'fb.1.1696000000000.AbCdEfGh', fbp: 'fb.1.1696000000000.987654321',
+      });
+      const richScore = emqScore(rich);
+      assert(richScore >= 6, `rich payload scored ${richScore}/10 — Meta needs ≥6 to optimize`);
+      // Prove the scorer isn't a rubber stamp: email-only must FAIL the bar.
+      const thin = emqScore(buildCapiUserData({ email: 'only@email.com' }));
+      assert(thin < 6, `email-only scored ${thin}/10 — the rubric correctly rejects thin payloads`);
+      return { metric: { value: `${richScore}/10`, budget: '≥ 6/10 (Meta EMQ)' } };
+    }),
+    T('pv3', 'event stream ingests 1,000 events/sec with zero drops', 'prodverify', env => {
+      const N = 1000;
+      const before = env.getState().notifs.length;
+      const ms = measure(() => {
+        for (let i = 0; i < N; i++) {
+          env.dispatch({ t: 'notif+', n: { id: `s${i}`, text: `stream event ${i}`, at: isoOf(new Date()), read: false, kind: 'system' } });
+        }
+      });
+      const landed = env.getState().notifs.length - before;
+      eq(landed, N, `all ${N} events were ingested — none buffered or dropped`);
+      const eps = Math.round(N / (ms / 1000));
+      assert(eps >= 1000, `throughput ${eps.toLocaleString()} ev/s is below the 1,000 ev/s requirement`);
+      return { metric: { value: `${eps.toLocaleString()} ev/s`, budget: '≥ 1,000 ev/s · 0 drops' } };
+    }),
+    T('pv4', 'guard: the suite only ever grows (no silently disabled tests)', 'prodverify', async () => {
+      const { SUITES, TOTAL_TESTS } = await import('./suites');
+      assert(TOTAL_TESTS >= 124, `only ${TOTAL_TESTS} checks remain — the floor is 124; someone removed tests`);
+      for (const s of SUITES) assert(s.tests.length > 0, `suite "${s.name}" is empty`);
+      // Detect the exact ID-collision bug that once hid 13 results.
+      const ids = SUITES.flatMap(s => s.tests.map(t => t.id));
+      eq(new Set(ids).size, ids.length, 'duplicate test IDs found — results would overwrite each other');
+    }),
+  ],
+};
+
+/* ================= S21 · media upload pipeline =================
+   Proves photos/video actually work — parsing, limits, persistence. */
+const mediaSuite: Suite = {
+  id: 's21', name: 'Media upload pipeline', icon: 'image', tone: '#2f8f83',
+  blurb: 'Photos, carousels and video links — the upload path users actually hit.',
+  tests: [
+    T('md1', 'videoEmbedSrc parses YouTube watch + short links', 'contracts', () => {
+      assert(videoEmbedSrc('https://www.youtube.com/watch?v=dQw4w9WgXcQ') === 'https://www.youtube.com/embed/dQw4w9WgXcQ', 'watch URL');
+      assert(videoEmbedSrc('https://youtu.be/abcdefghijk') === 'https://www.youtube.com/embed/abcdefghijk', 'short URL');
+    }),
+    T('md2', 'videoEmbedSrc parses Vimeo + .mp4, rejects junk', 'contracts', () => {
+      assert(videoEmbedSrc('https://vimeo.com/76979871') === 'https://player.vimeo.com/video/76979871', 'vimeo');
+      assert(videoEmbedSrc('https://cdn.example.com/roast.mp4') === 'https://cdn.example.com/roast.mp4', 'mp4 passthrough');
+      eq(videoEmbedSrc('https://example.com/notavideo'), null, 'non-video rejected');
+    }),
+    T('md3', 'readImageFile rejects non-images and enforces the 8 MB cap', 'contracts', async () => {
+      let threw = false;
+      try { await readImageFile(new File(['x'], 'evil.txt', { type: 'text/plain' })); } catch { threw = true; }
+      assert(threw, 'text file rejected');
+      threw = false;
+      try { await readImageFile(new File([new Uint8Array(9 * 1024 * 1024)], 'big.png', { type: 'image/png' })); } catch { threw = true; }
+      assert(threw, 'oversized image rejected');
+    }),
+    T('md4', 'a small image becomes a persistable data-URL', 'contracts', async () => {
+      const px = 'data:image/gif;base64,R0lGODlhAQABAAAAACw=';
+      const f = await fetch(px).then(r => r.blob()).then(b => new File([b], 'pixel.gif', { type: 'image/gif' }));
+      const img = await readImageFile(f);
+      assert(img.url.indexOf('base64,R0lGODlhAQABAAAAACw=') > 0, 'stored as a base64 data-URL');
+      eq(img.sessionOnly, false, 'small enough to survive reload');
+    }),
+    T('md5', 'carousel is capped at 4 frames', 'contracts', () => {
+      eq(MAX_CAROUSEL, 4, 'Instagram/LinkedIn carousel limit honored');
+    }),
+    T('md6', 'post attachment round-trips through persistence', 'contracts', env => {
+      const att = { kind: 'image' as const, url: 'image/gif;base64,R0lGODlhAQABAAAAACw=', name: 'pixel.gif' };
+      env.api.addPost({ text: 'with photo', platforms: ['instagram'], date: isoOf(new Date()), time: '10:00', status: 'draft' as const, author: 'Maya Chen', media: 'image' as const, attachment: att });
+      const back = parsePersisted(JSON.stringify({ version: 2, data: env.getState() }))!;
+      const p = back.posts.find(x => x.text === 'with photo')!;
+      eq(p.attachment?.url, att.url, 'attachment survives reload');
+    }),
+  ],
+};
+
+export const DEEP_SUITES: Suite[] = [smokeSuite, contractsSuite, calendarSuite, persistSuite, puritySuite, floodSuite, prodSuite, mediaSuite];
 export const DEEP_TOTAL = DEEP_SUITES.reduce((n, s) => n + s.tests.length, 0);
 export const DEEP_REQ_LABEL: Record<string, { label: string; spec: string }> = {
   smoke: { label: 'Module smoke renders', spec: 'Type 9' },
@@ -356,4 +480,5 @@ export const DEEP_REQ_LABEL: Record<string, { label: string; spec: string }> = {
   persist: { label: 'Persistence corruption fuzz', spec: 'Type 12' },
   purity: { label: 'Reducer purity & idempotency', spec: 'Type 13' },
   flood: { label: 'Flood endurance', spec: 'Type 14' },
+  prodverify: { label: 'Production verification', spec: 'Type 15' },
 };
