@@ -1,11 +1,28 @@
 {
-  "name": "sandbox-workspace",
+  "name": "cadence-marketing-os",
+  "version": "2.0.0",
+  "description": "Full-fledged Marketing Ecosystem replacing HubSpot, Hootsuite & Agency Tools",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "typecheck": "tsc --noEmit"
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "vite",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "vite build",
+    "build:backend": "cd backend && npm run build",
+    "start": "cd backend && npm start",
+    "docker:up": "docker-compose -f infrastructure/docker/docker-compose.yml up -d",
+    "docker:down": "docker-compose -f infrastructure/docker/docker-compose.yml down",
+    "docker:logs": "docker-compose -f infrastructure/docker/docker-compose.yml logs -f",
+    "db:migrate": "cd backend && npm run db:migrate",
+    "db:seed": "cd backend && npm run db:seed",
+    "test": "cd backend && npm test",
+    "test:coverage": "cd backend && npm run test:coverage",
+    "lint": "eslint src backend/src --ext .ts,.tsx",
+    "typecheck": "tsc --noEmit && cd backend && npx tsc --noEmit",
+    "security:audit": "npm audit && cd backend && npm audit",
+    "prepare": "husky install"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",
@@ -29,8 +46,17 @@
     "@types/react-dom": "^18.2.0",
     "@types/uuid": "^9.0.7",
     "@vitejs/plugin-react": "^4.3.4",
+    "concurrently": "^8.2.2",
+    "husky": "^9.0.11",
     "tailwindcss": "^4.1.7",
     "typescript": "^5.7.0",
     "vite": "^6.3.5"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "volta": {
+    "node": "20.15.1"
   }
 }

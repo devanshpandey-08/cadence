@@ -464,6 +464,51 @@ CREATE TRIGGER update_contacts_updated_at BEFORE UPDATE ON contacts FOR EACH ROW
 CREATE TRIGGER update_companies_updated_at BEFORE UPDATE ON companies FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_deals_updated_at BEFORE UPDATE ON deals FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Row Level Security (RLS) Template (Must be enabled per table)
--- ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
--- CREATE POLICY org_isolation ON contacts USING (org_id = current_setting('app.current_org_id')::uuid);
+-- Row Level Security (RLS) - CRITICAL FOR MULTI-TENANCY
+-- Enable RLS on all tenant-scoped tables
+ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE companies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE deals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE tickets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE workflows ENABLE ROW LEVEL SECURITY;
+ALTER TABLE email_campaigns ENABLE ROW LEVEL SECURITY;
+ALTER TABLE social_posts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE org_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE property_definitions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+
+-- Create organization isolation policies
+CREATE POLICY org_isolation_contacts ON contacts 
+    USING (org_id = current_setting('app.current_org_id')::uuid);
+
+CREATE POLICY org_isolation_companies ON companies 
+    USING (org_id = current_setting('app.current_org_id')::uuid);
+
+CREATE POLICY org_isolation_deals ON deals 
+    USING (org_id = current_setting('app.current_org_id')::uuid);
+
+CREATE POLICY org_isolation_tickets ON tickets 
+    USING (org_id = current_setting('app.current_org_id')::uuid);
+
+CREATE POLICY org_isolation_workflows ON workflows 
+    USING (org_id = current_setting('app.current_org_id')::uuid);
+
+CREATE POLICY org_isolation_email_campaigns ON email_campaigns 
+    USING (org_id = current_setting('app.current_org_id')::uuid);
+
+CREATE POLICY org_isolation_social_posts ON social_posts 
+    USING (org_id = current_setting('app.current_org_id')::uuid);
+
+CREATE POLICY org_isolation_property_definitions ON property_definitions 
+    USING (org_id = current_setting('app.current_org_id')::uuid);
+
+CREATE POLICY org_isolation_audit_logs ON audit_logs 
+    USING (org_id = current_setting('app.current_org_id')::uuid);
+
+-- Users can only see members of their own organization
+CREATE POLICY org_isolation_org_members ON org_members 
+    USING (org_id = current_setting('app.current_org_id')::uuid);
+
+-- Super admins can bypass RLS (for support/debugging)
+-- CREATE POLICY super_admin_bypass ON contacts 
+--     USING (current_setting('app.is_super_admin')::boolean = true);
